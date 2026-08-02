@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "lint:md": "markdownlint-cli2",
     "typecheck": "tsc --noEmit",
-    "check": "npm run validate:content && npm run lint && npm run lint:md && npm run typecheck",
+    "test": "node --test",
+    "check": "npm run validate:content && npm run lint && npm run lint:md && npm run typecheck && npm run test",
     "build": "node scripts/build-content-index.mjs && vite build",
     "preview": "vite preview"
   },
@@ -22,6 +23,8 @@
     "eslint": "^9.17.0",
     "globals": "^17.8.0",
     "markdownlint-cli2": "^0.15.0",
+    "marked": "^15.0.7",
+    "sanitize-html": "^2.14.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.18.2",
     "vite": "^6.0.0",

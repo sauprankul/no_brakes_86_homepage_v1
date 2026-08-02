@@ -4,8 +4,8 @@
 
 Everything in the archive is a **node**. Every node folder has exactly one `config.yaml`. The presence of `article.md` is the default rendering switch:
 
-- no `article.md` → render the node title/description and a preview list of child nodes;
-- `article.md` → render the authored article, followed by any child previews;
+- no `article.md` → render the node title/description and a preview list of direct child entries;
+- `article.md` → render the authored Markdown as the article body;
 - both → the node is simultaneously an article and a folder.
 
 This permits the requested Confluence-like hierarchy without inventing two incompatible content types. A folder-only node renders its child previews; an article node renders its content first and child previews below it.
@@ -52,8 +52,12 @@ Do not publish an article with a missing thumbnail alt text, empty title or unva
 
 - The global search matches title, subtitle, category, tags and, in production, full body text.
 - Search is case-insensitive, debounced and keyboard accessible.
-- Category list filtering includes text match, include-tag, exclude-tag and publication date/order.
-- Display active filters and result count. A clear-all action is required when filters are active.
+- Every page that has direct children exposes the search/filter tool. Index pages place it above the preview list; article pages place it below the Markdown body.
+- An index page initially lists direct children only. Once the visitor changes any query or filter, matching direct and indirect descendants become candidates.
+- An article with children initially lists no children and shows only the faint hint “Search for something under this article.” Once the visitor changes any query or filter, matching direct and indirect descendants appear.
+- Filtering includes text match, an “Articles only?” choice (`Any`, `Yes`, or `No`), multiple include tags, multiple exclude tags, publication date, and ordering. The public interface must use “entries” or “articles”, never the technical word “node”.
+- Include/exclude tags are typeahead text fields: show up to five matching suggestions and represent selected tags as removable chips.
+- Display active filters and result count only after a filter is active. A clear-all action is required when filters are active.
 
 ### Phase 2: full-text without an API
 
@@ -63,6 +67,9 @@ Index author article content only: mark the article body with `data-pagefind-bod
 
 ## Article experience
 
+- Convert each `article.md` directly to sanitized HTML at build time. Do not insert hardcoded gallery, author-note, download, or section placeholder blocks into authored articles.
+- Generate the “On this page” box from the article’s level-two and level-three Markdown headings. Hide it if none exist.
+- A Markdown link to `./Downloads/<file>` renders as an accessible download button and is copied to the built site. The article folder’s `Downloads/` directory contains only intentionally public attachments.
 - Support YouTube video embeds with a privacy-enhanced domain (`youtube-nocookie.com`) and a click-to-load thumbnail, not an eager iframe.
 - Support responsive author photos, captions, lightbox controls, part-number callouts, warnings, callouts, tables, figures, source links and downloadable data.
 - Data downloads must include file type, size, created date, checksum when meaningful and an accessibility-friendly label.

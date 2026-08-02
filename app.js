@@ -75,12 +75,13 @@ function thumb(article) {
 function tags(tags) { return `<div class="tags">${tags.map((tag) => `<span class="tag">${esc(tag)}</span>`).join('')}</div>`; }
 
 function articleRow(article, expanded = false) {
+  const dateLabel = article.date ? formatDate(article.date) : 'Draft';
   const updated = article.updatedAt && article.updatedAt !== article.date ? `<span>Updated ${formatDate(article.updatedAt)}</span>` : '';
   return `
     <article class="article-row article-row--clickable" data-article="${article.id}" tabindex="0" aria-label="Open ${esc(article.title)}">
       ${thumb(article)}
       <div class="article-row__body">
-        <p class="article-row__meta"><span>${esc(article.type)}</span><span>${formatDate(article.date)}</span>${updated}</p>
+        <p class="article-row__meta"><span>${esc(article.type)}</span><span>${dateLabel}</span>${updated}</p>
         <a class="article-row__title" href="#article/${article.id}" data-article="${article.id}">${esc(article.title)}</a>
         <p class="article-row__summary">${esc(article.subtitle)}</p>
         ${tags(expanded ? article.tags : article.tags.slice(0, 3))}
@@ -151,7 +152,7 @@ function setBreadcrumb(parts) {
 }
 
 function renderHome() {
-  const newItems = [...articles].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  const newItems = [...articles].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')).slice(0, 5);
   const hotItems = articles.filter((article) => article.featured === 'hot').slice(0, 5);
   state.category = null;
   state.article = null;
@@ -193,62 +194,100 @@ function getTagOptions(items) {
   return [...new Set(items.flatMap((article) => article.tags))].sort((a, b) => a.localeCompare(b));
 }
 
-function renderCategory(id, entriesOverride = null) {
+function collectionMarkup(id, articleMode) {
+  const placement = articleMode ? 'collection-controls--article' : 'collection-controls--index';
+  return `<section class="collection-controls ${placement}" id="collection-${id}" aria-label="Search entries below this page">
+    <div class="filters">
+      <label><span>Search</span><input data-filter="text" type="search" placeholder="Search title, subtitle or tags…" /></label>
+      <label><span>Articles only?</span><select data-filter="articles-only"><option value="">Any</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+      <label class="tag-filter"><span>Include tags</span><div class="tag-filter__box" data-tag-box="include"><div class="tag-chips" data-tag-chips="include"></div><input data-tag-input="include" type="search" autocomplete="off" placeholder="Type a tag" /></div><div class="tag-options" data-tag-options="include" hidden></div></label>
+      <label class="tag-filter"><span>Exclude tags</span><div class="tag-filter__box" data-tag-box="exclude"><div class="tag-chips" data-tag-chips="exclude"></div><input data-tag-input="exclude" type="search" autocomplete="off" placeholder="Type a tag" /></div><div class="tag-options" data-tag-options="exclude" hidden></div></label>
+      <label><span>Published after</span><input data-filter="after" type="date" /></label>
+      <label><span>Published before</span><input data-filter="before" type="date" /></label>
+      <label><span>Order</span><select data-filter="order"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="title">Title A–Z</option></select></label>
+    </div>
+    <div class="collection-status"><p class="collection-hint" data-collection-hint ${articleMode ? '' : 'hidden'}>Search for something under this article.</p><button class="clear-filters" type="button" data-clear-filters hidden>Clear filters</button></div>
+    <p class="filter-count" data-filter-count ${articleMode ? 'hidden' : ''}></p>
+  </section>`;
+}
+
+function mountCollection(id, articleMode) {
+  const root = document.querySelector(`#collection-${id}`);
+  const results = document.querySelector('#category-results');
+  const direct = directChildren(id);
+  const all = descendantEntries(id);
+  const tagsAvailable = getTagOptions(all);
+  const selected = { include: [], exclude: [] };
+  const input = (name) => root.querySelector(`[data-filter="${name}"]`);
+  const hasCriteria = () => Boolean(input('text').value.trim() || input('articles-only').value || input('after').value || input('before').value || input('order').value !== 'new' || selected.include.length || selected.exclude.length);
+  const paintChips = (kind) => {
+    root.querySelector(`[data-tag-chips="${kind}"]`).innerHTML = selected[kind].map((tag) => `<span class="tag-chip">${esc(tag)}<button type="button" data-remove-tag="${kind}" data-tag="${esc(tag)}" aria-label="Remove ${esc(tag)}">×</button></span>`).join('');
+  };
+  const paintOptions = (kind) => {
+    const field = root.querySelector(`[data-tag-input="${kind}"]`);
+    const options = root.querySelector(`[data-tag-options="${kind}"]`);
+    const term = field.value.trim().toLowerCase();
+    const matches = tagsAvailable.filter((tag) => !selected[kind].includes(tag) && (!term || tag.toLowerCase().includes(term))).slice(0, 5);
+    options.hidden = matches.length === 0;
+    options.innerHTML = matches.map((tag) => `<button type="button" data-add-tag="${kind}" data-tag="${esc(tag)}">${esc(tag)}</button>`).join('');
+  };
+  const update = () => {
+    const active = hasCriteria();
+    const term = input('text').value.trim().toLowerCase();
+    const articlesOnly = input('articles-only').value;
+    const after = input('after').value;
+    const before = input('before').value;
+    const order = input('order').value;
+    const filtered = (active ? all : direct).filter((entry) => {
+      const haystack = [entry.title, entry.subtitle, entry.type, ...entry.tags].join(' ').toLowerCase();
+      const isArticle = entry.hasArticle !== false;
+      return (!term || haystack.includes(term)) && (!articlesOnly || (articlesOnly === 'yes' ? isArticle : !isArticle)) && selected.include.every((tag) => entry.tags.includes(tag)) && !selected.exclude.some((tag) => entry.tags.includes(tag)) && (!after || !entry.date || entry.date >= after) && (!before || !entry.date || entry.date <= before);
+    }).sort((a, b) => order === 'title' ? a.title.localeCompare(b.title) : order === 'old' ? (a.date ?? '').localeCompare(b.date ?? '') : (b.date ?? '').localeCompare(a.date ?? ''));
+    root.querySelector('[data-collection-hint]').hidden = !articleMode || active;
+    root.querySelector('[data-filter-count]').hidden = articleMode && !active;
+    root.querySelector('[data-clear-filters]').hidden = !active;
+    root.querySelector('[data-filter-count]').textContent = `${filtered.length} ${filtered.length === 1 ? 'entry' : 'entries'} shown`;
+    results.innerHTML = articleMode && !active ? '' : (filtered.length ? filtered.map((entry) => articleRow(entry, true)).join('') : '<div class="empty-state"><strong>No matching entries.</strong>Try removing a filter or searching a different term.</div>');
+  };
+  root.addEventListener('input', (event) => {
+    const kind = event.target.dataset.tagInput;
+    if (kind) paintOptions(kind);
+    update();
+  });
+  root.addEventListener('change', update);
+  root.addEventListener('click', (event) => {
+    const add = event.target.closest('[data-add-tag]');
+    const remove = event.target.closest('[data-remove-tag]');
+    if (add && !selected[add.dataset.addTag].includes(add.dataset.tag)) {
+      selected[add.dataset.addTag].push(add.dataset.tag);
+      root.querySelector(`[data-tag-input="${add.dataset.addTag}"]`).value = '';
+      paintChips(add.dataset.addTag); paintOptions(add.dataset.addTag); update();
+    }
+    if (remove) {
+      selected[remove.dataset.removeTag] = selected[remove.dataset.removeTag].filter((tag) => tag !== remove.dataset.tag);
+      paintChips(remove.dataset.removeTag); paintOptions(remove.dataset.removeTag); update();
+    }
+    if (event.target.closest('[data-clear-filters]')) {
+      root.querySelectorAll('[data-filter]').forEach((control) => { control.value = control.dataset.filter === 'order' ? 'new' : ''; });
+      selected.include = []; selected.exclude = [];
+      paintChips('include'); paintChips('exclude'); paintOptions('include'); paintOptions('exclude'); update();
+    }
+  });
+  update();
+}
+
+function renderCategory(id) {
   const category = categoryById(id) || articleById(id);
   if (!category) return renderHome();
   state.category = id;
   state.article = null;
   const immediateChildren = directChildren(id);
-  const categoryArticles = entriesOverride || descendantEntries(id);
-  const tagOptions = getTagOptions(categoryArticles);
   const categoryName = category.name || category.title;
   const categoryShort = category.short || categoryName;
   setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: categoryName }]);
-  main.innerHTML = `
-    <header class="page-header">
-      <p class="eyebrow">ARCHIVE / ${esc(categoryShort)}</p>
-      <h1>${esc(categoryName)}</h1>
-      <p>${esc(category.intro || category.subtitle || 'Preview the nodes in this part of the archive.')}</p>
-    </header>
-    <section aria-label="${esc(categoryName)} entries">
-      <div class="category-results" id="category-results"></div>
-      ${immediateChildren.length ? `<div class="collection-controls">
-      <div class="filters">
-        <label><span>Filter entries</span><input id="filter-text" type="search" placeholder="Search title, subtitle or tags…" /></label>
-        <label><span>Show</span><select id="filter-kind"><option value="">All nodes &amp; articles</option><option value="articles">Articles only</option><option value="indexes">Index nodes only</option></select></label>
-        <label><span>Include tag</span><select id="filter-include"><option value="">All tags</option>${tagOptions.map((tag) => `<option value="${esc(tag)}">${esc(tag)}</option>`).join('')}</select></label>
-        <label><span>Exclude tag</span><select id="filter-exclude"><option value="">No exclusions</option>${tagOptions.map((tag) => `<option value="${esc(tag)}">${esc(tag)}</option>`).join('')}</select></label>
-        <label><span>Published after</span><input id="filter-after" type="date" /></label>
-        <label><span>Published before</span><input id="filter-before" type="date" /></label>
-        <label><span>Order</span><select id="filter-order"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="title">Title A–Z</option></select></label>
-      </div>
-      <p class="filter-count" id="filter-count"></p>
-      </div>` : ''}
-    </section>`;
-  if (!immediateChildren.length) {
-    document.querySelector('#category-results').innerHTML = '<div class="empty-state"><strong>No child entries yet.</strong>This node will stay clean until it has something to preview.</div>';
-    renderTree();
-    return;
-  }
-  const controls = ['filter-text', 'filter-kind', 'filter-include', 'filter-exclude', 'filter-after', 'filter-before', 'filter-order'].map((controlId) => document.querySelector(`#${controlId}`));
-  const update = () => {
-    const term = document.querySelector('#filter-text').value.trim().toLowerCase();
-    const kind = document.querySelector('#filter-kind').value;
-    const include = document.querySelector('#filter-include').value;
-    const exclude = document.querySelector('#filter-exclude').value;
-    const after = document.querySelector('#filter-after').value;
-    const before = document.querySelector('#filter-before').value;
-    const order = document.querySelector('#filter-order').value;
-    const filtered = categoryArticles.filter((article) => {
-      const index = [article.title, article.subtitle, article.type, ...article.tags].join(' ').toLowerCase();
-      return (!term || index.includes(term)) && (!kind || (kind === 'articles' ? article.hasArticle !== false : article.hasArticle === false)) && (!include || article.tags.includes(include)) && (!exclude || !article.tags.includes(exclude)) && (!after || article.date >= after) && (!before || article.date <= before);
-    }).sort((a, b) => order === 'title' ? a.title.localeCompare(b.title) : order === 'old' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
-    document.querySelector('#filter-count').textContent = `${filtered.length} ${filtered.length === 1 ? 'entry' : 'entries'} shown`;
-    document.querySelector('#category-results').innerHTML = filtered.length ? filtered.map((article) => articleRow(article, true)).join('') : '<div class="empty-state"><strong>No matching entries.</strong>Try removing a filter or searching a different term.</div>';
-  };
-  controls.forEach((control) => control.addEventListener('input', update));
-  controls.forEach((control) => control.addEventListener('change', update));
-  update();
+  main.innerHTML = `<header class="page-header"><p class="eyebrow">ARCHIVE / ${esc(categoryShort)}</p><h1>${esc(categoryName)}</h1><p>${esc(category.intro || category.subtitle || 'Preview the entries in this part of the archive.')}</p></header><section aria-label="${esc(categoryName)} entries">${immediateChildren.length ? collectionMarkup(id, false) : ''}<div class="category-results" id="category-results"></div></section>`;
+  if (immediateChildren.length) mountCollection(id, false);
+  else document.querySelector('#category-results').innerHTML = '<div class="empty-state"><strong>No child entries yet.</strong>This page will stay clean until it has something to preview.</div>';
   renderTree();
 }
 
@@ -261,27 +300,17 @@ function renderArticle(id) {
   if (!category) return renderCategory(article.id);
   state.category = category.id;
   state.article = article.id;
+  const hasChildren = directChildren(article.id).length > 0;
+  const toc = article.headings?.length ? `<aside class="article-aside"><h2>On this page</h2><ul>${article.headings.map((heading) => `<li class="article-aside__level-${heading.depth}"><a href="#${esc(heading.id)}">${esc(heading.text)}</a></li>`).join('')}</ul></aside>` : '';
   setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: category.name, href: `#category/${category.id}` }, { label: article.title }]);
   main.innerHTML = `
-    <header class="article-header">
-      <p class="eyebrow">${esc(category.short)} / ${esc(article.type)}</p>
-      <h1>${esc(article.title)}</h1>
-      <p class="article-header__subtitle">${esc(article.subtitle)}</p>
-      <div class="article-info"><span>Published <b>${formatDate(article.date)}</b></span>${article.updatedAt && article.updatedAt !== article.date ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}<span>Tags ${tags(article.tags)}</span></div>
-    </header>
+    <div class="article-info article-info--standalone"><span>${esc(article.type)}</span>${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && article.updatedAt !== article.date ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}</div>
     <div class="article-layout">
-      <article class="article-body" data-pagefind-body>
-        <div class="media-placeholder"><span>AUTHOR VIDEO / IMAGE GALLERY GOES HERE</span></div>
-        <p class="author-note"><strong>Author-owned content slot.</strong> This prototype has intentionally not generated an article. Add your video embed, photos, measurements, source links and written notes in the content file for this entry.</p>
-        <h2>What belongs in this article</h2>
-        <p>Use this page as a reusable article shell. Every claim should be yours, sourced, or clearly marked as an observation. That is what makes this archive stronger than a feed post.</p>
-        <div class="download-card"><div><span class="download-card__name">Data / documents</span><span class="download-card__meta">Attach AIM, CSV, setup sheet or relevant files.</span></div><span class="download-card__status">Pending</span></div>
-      </article>
-      <aside class="article-aside">
-        <h2>On this page</h2>
-        <ul><li><button type="button" data-scroll=".media-placeholder">Video &amp; gallery</button></li><li><button type="button" data-scroll=".author-note">Your notes</button></li><li><button type="button" data-scroll=".download-card">Downloads</button></li></ul>
-      </aside>
-    </div>`;
+      <article class="article-body article-markdown" data-pagefind-body>${article.html || ''}</article>
+      ${toc}
+    </div>
+    ${hasChildren ? `<section class="article-children" aria-label="Entries below ${esc(article.title)}">${collectionMarkup(article.id, true)}<div class="category-results" id="category-results"></div></section>` : ''}`;
+  if (hasChildren) mountCollection(article.id, true);
   renderTree();
 }
 
@@ -319,7 +348,7 @@ function search(query) {
   const term = query.trim().toLowerCase();
   const matches = searchableEntries(query);
   dialogResults.innerHTML = term
-    ? (matches.length ? matches.map((article) => `<div class="dialog-result"><button type="button" data-search-result="${article.id}">${thumb(article)}<span class="result-meta">${esc(categoryById(article.category)?.short ?? 'Archive')} · ${formatDate(article.date)}</span><strong>${esc(article.title)}</strong><p>${esc(article.subtitle)}</p></button></div>`).join('') : '<div class="empty-state"><strong>No result yet.</strong>Try a track, part, technique or repair.</div>')
+    ? (matches.length ? matches.map((article) => `<div class="dialog-result"><button type="button" data-search-result="${article.id}">${thumb(article)}<span class="result-meta">${esc(categoryById(article.category)?.short ?? 'Archive')} · ${article.date ? formatDate(article.date) : 'Draft'}</span><strong>${esc(article.title)}</strong><p>${esc(article.subtitle)}</p></button></div>`).join('') : '<div class="empty-state"><strong>No result yet.</strong>Try a track, part, technique or repair.</div>')
     : '<div class="empty-state"><strong>Search the archive.</strong>Results will include titles, subtitles, categories and tags.</div>';
 }
 

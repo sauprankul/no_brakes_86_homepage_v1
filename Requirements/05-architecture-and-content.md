@@ -23,7 +23,8 @@ homepage_v1/
 │  │     ├─ config.yaml
 │  │     ├─ article.md
 │  │     ├─ media/
-│  │     └─ data/
+│  │     ├─ data/
+│  │     └─ Downloads/
 │  ├─ engine-rebuild/
 │  │  ├─ config.yaml
 │  │  └─ gr86-engine-blew/
@@ -35,6 +36,8 @@ homepage_v1/
 ```
 
 Run `npm install` once, then `npm run dev` (or VS Code task **No Brakes: live authoring preview**). Save Markdown in VS Code and the browser preview refreshes. Saving locally never changes the public site: the production update is an automatic static deployment after commit/push to the connected Git repository.
+
+The local preview includes drafts so a newly written `article.md` is visible before publishing. The production build includes only `published: true` entries. During either build, `article.md` is converted into sanitized HTML; its level-two/level-three headings become the article table of contents. A relative Markdown link such as `[Setup sheet](./Downloads/setup.csv)` is converted into a download control and its file is copied into the built site.
 
 ## Recommended production repository layout
 

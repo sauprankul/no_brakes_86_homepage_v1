@@ -7,7 +7,7 @@ const missing = required.filter((name) => !process.env[name]);
 if (missing.length) throw new Error(`Missing required R2 configuration: ${missing.join(', ')}`);
 
 const root = path.join(process.cwd(), 'Content');
-const mediaDirectories = new Set(['data', 'media']);
+const mediaDirectories = new Set(['data', 'media', 'Downloads']);
 const client = new S3Client({
   region: 'auto',
   endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,

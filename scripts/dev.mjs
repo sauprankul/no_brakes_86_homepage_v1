@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 
 const children = [
-  spawn(process.execPath, ['scripts/build-content-index.mjs', '--watch'], { stdio: 'inherit' }),
+  spawn(process.execPath, ['scripts/build-content-index.mjs', '--watch', '--include-drafts'], { stdio: 'inherit' }),
   spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['vite', '--host', '127.0.0.1'], { stdio: 'inherit' }),
 ];
 
