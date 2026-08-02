@@ -26,7 +26,7 @@ jobs:
 
   deploy:
     name: deploy-production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CLOUDFLARE_PAGES_PROJECT != ''
     needs: quality
     runs-on: ubuntu-latest
     environment: production
