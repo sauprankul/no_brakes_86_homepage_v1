@@ -169,6 +169,7 @@ main { max-width: 1500px; margin: 0 auto; padding: clamp(26px, 5vw, 76px) clamp(
 .article-body a { color: var(--yellow); text-decoration: underline; text-underline-offset: 3px; }
 .article-body ul, .article-body ol { color: #b4bac1; }
 .article-body pre { overflow-x: auto; padding: 14px; background: #17191c; border: 1px solid var(--line); }
+.article-video { display: block; width: 100%; aspect-ratio: 16 / 9; margin: 24px 0; border: 1px solid var(--line); border-radius: 5px; }
 .download-link { display: inline-flex; align-items: center; gap: 11px; min-width: 235px; padding: 11px 13px; color: var(--ink) !important; background: #1b1e22; border: 1px solid #41464c; border-radius: 5px; text-decoration: none !important; }
 .download-link:hover { border-color: var(--yellow); background: #24272b; }
 .download-link__icon { display: grid; width: 29px; height: 29px; place-items: center; color: #1c180b; background: var(--yellow); border-radius: 3px; font-size: 1.1rem; font-weight: 900; }

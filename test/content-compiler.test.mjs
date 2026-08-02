@@ -16,3 +16,9 @@ test('removes unsafe HTML from authored Markdown', () => {
   assert.doesNotMatch(rendered.html, /script/i);
   assert.deepEqual(rendered.headings, [{ id: 'safe-heading', text: 'Safe heading', depth: 2 }]);
 });
+
+test('preserves an approved privacy-enhanced YouTube embed', () => {
+  const rendered = renderArticleMarkdown('<iframe src="https://www.youtube-nocookie.com/embed/5UwIX1HKLgU" title="Recap" loading="lazy" allowfullscreen></iframe>', 'recap');
+  assert.match(rendered.html, /youtube-nocookie\.com\/embed\/5UwIX1HKLgU/);
+  assert.match(rendered.html, /allowfullscreen/);
+});

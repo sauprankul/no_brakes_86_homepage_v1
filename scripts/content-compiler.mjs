@@ -29,8 +29,8 @@ export function renderArticleMarkdown(markdown, nodeId) {
   };
   const unsafeHtml = marked.parse(markdown, { renderer, gfm: true });
   const safeHtml = sanitizeHtml(unsafeHtml, {
-    allowedTags: [...sanitizeHtml.defaults.allowedTags, 'img', 'h1', 'h2', 'h3'],
-    allowedAttributes: { ...sanitizeHtml.defaults.allowedAttributes, '*': ['class', 'id'], a: ['href', 'title', 'class', 'download'], img: ['src', 'alt', 'title', 'width', 'height'] },
+    allowedTags: [...sanitizeHtml.defaults.allowedTags, 'img', 'h1', 'h2', 'h3', 'iframe'],
+    allowedAttributes: { ...sanitizeHtml.defaults.allowedAttributes, '*': ['class', 'id'], a: ['href', 'title', 'class', 'download'], img: ['src', 'alt', 'title', 'width', 'height'], iframe: ['src', 'title', 'loading', 'allow', 'allowfullscreen', 'referrerpolicy'] },
   });
   const html = safeHtml.replace(/<a href="\.\/Downloads\/([^"?#]+)">([^<]+)<\/a>/g, (_match, file, label) => downloadMarkup(`/downloads/${nodeId}/${encodeURIComponent(file)}`, label));
   return { html, headings };
