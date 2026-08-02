@@ -1,4 +1,5 @@
 import { filterCollection, filtersAreActive } from './scripts/collection-filter.mjs';
+import { articleHeaderMarkup } from './scripts/article-view.mjs';
 
 /*
   Prototype content deliberately contains navigation metadata and the requester's
@@ -297,8 +298,9 @@ function renderArticle(id) {
   const hasChildren = directChildren(article.id).length > 0;
   const toc = article.headings?.length ? `<aside class="article-aside"><h2>On this page</h2><ul>${article.headings.map((heading) => `<li class="article-aside__level-${heading.depth}"><a href="#${esc(heading.id)}">${esc(heading.text)}</a></li>`).join('')}</ul></aside>` : '';
   setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: category.name, href: `#category/${category.id}` }, { label: article.title }]);
+  const details = `${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}`;
   main.innerHTML = `
-    <div class="article-info article-info--standalone"><span>${esc(article.type)}</span>${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}</div>
+    ${articleHeaderMarkup(article, details)}
     <div class="article-layout">
       <article class="article-body article-markdown" data-pagefind-body>${article.html || ''}</article>
       ${toc}

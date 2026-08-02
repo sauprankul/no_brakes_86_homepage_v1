@@ -71,6 +71,7 @@ Index author article content only: mark the article body with `data-pagefind-bod
 ## Article experience
 
 - Convert each `article.md` directly to sanitized HTML at build time. Do not insert hardcoded gallery, author-note, download, or section placeholder blocks into authored articles.
+- Render an article page’s H1 title and optional subtitle from its `config.yaml`; authors do not need to repeat either in `article.md`.
 - Generate the “On this page” box from the article’s level-two and level-three Markdown headings. Hide it if none exist.
 - A Markdown link to `./Downloads/<file>` renders as an accessible download button and is copied to the built site. The article folder’s `Downloads/` directory contains only intentionally public attachments.
 - `Downloads/` and `Media/` are intentionally Git-ignored author workspaces. Each entry’s preview thumbnail is automatically selected from its folder in this priority order: `thumbnail.png`, then `thumbnail.jpg`, then `thumbnail.jpeg`.
