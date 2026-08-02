@@ -1,6 +1,6 @@
 # 2026 Round 1: Thunderhill East Cyclone
 
-After the Sonoma round.
+After the Sonoma round, I had it up to here
 
 ## Downloads
 
