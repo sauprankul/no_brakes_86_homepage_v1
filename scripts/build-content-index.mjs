@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, readdir, watch, writeFile } from 'node:fs/promises';
+import { access, copyFile, mkdir, readFile, readdir, watch, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
 import { renderArticleMarkdown } from './content-compiler.mjs';
@@ -8,12 +8,15 @@ const contentRoot = path.join(root, 'Content');
 const outputFile = path.join(root, 'public', 'content-index.json');
 const isWatchMode = process.argv.includes('--watch');
 const includeDrafts = process.argv.includes('--include-drafts');
+const touchUpdates = process.argv.includes('--touch-updates');
 
 const today = () => {
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
   const value = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
   return `${value.year}-${value.month}-${value.day}`;
 };
+const now = () => new Date().toISOString();
+const sortableDate = (entry) => entry.date ?? entry.updatedAt ?? '';
 
 async function filesIn(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -26,6 +29,18 @@ async function filesIn(directory) {
 
 async function readYaml(file) {
   return YAML.parse(await readFile(file, 'utf8')) ?? {};
+}
+
+async function exists(file) {
+  return access(file).then(() => true).catch(() => false);
+}
+
+async function findThumbnail(directory, configured) {
+  for (const extension of ['png', 'jpg', 'jpeg']) {
+    const file = `thumbnail.${extension}`;
+    if (await exists(path.join(directory, file))) return `./${file}`;
+  }
+  return configured ?? '';
 }
 
 async function articleData(directory, nodeId) {
@@ -56,7 +71,7 @@ async function writeYaml(file, value) {
   await writeFile(file, YAML.stringify(value), 'utf8');
 }
 
-async function normaliseArticle(configFile, config, changedFile) {
+async function normaliseArticle(configFile, config) {
   if (config.published !== true) return config;
   let changed = false;
   const date = today();
@@ -68,10 +83,6 @@ async function normaliseArticle(configFile, config, changedFile) {
     config.updated_at = config.published_at;
     changed = true;
   }
-  if (changedFile && path.dirname(changedFile) === path.dirname(configFile) && changedFile.endsWith('.md') && config.updated_at !== date) {
-    config.updated_at = date;
-    changed = true;
-  }
   if (changed) await writeYaml(configFile, config);
   return config;
 }
@@ -80,13 +91,13 @@ function slugFrom(file) {
   return path.relative(contentRoot, path.dirname(file)).replaceAll(path.sep, '/').replace(/\/(config|_node)$/i, '');
 }
 
-async function build(changedFile = '') {
+async function build() {
   const configs = (await filesIn(contentRoot)).filter((file) => path.basename(file) === 'config.yaml');
-  const entries = await Promise.all(configs.map(async (file) => ({ file, config: await normaliseArticle(file, await readYaml(file), changedFile) })));
+  const entries = await Promise.all(configs.map(async (file) => ({ file, config: await normaliseArticle(file, await readYaml(file)) })));
   const nodes = await Promise.all(entries.map(async ({ file, config }) => {
     const id = config.id ?? slugFrom(file);
     const directory = path.dirname(file);
-    return { file, config, id, parent: config.parent ?? null, ...(await articleData(directory, id)), directory };
+    return { file, config, id, parent: config.parent ?? null, thumbnail: await findThumbnail(directory, config.thumbnail), ...(await articleData(directory, id)), directory };
   }));
   const categories = nodes
     .filter(({ parent }) => !parent)
@@ -102,7 +113,7 @@ async function build(changedFile = '') {
   const categoryMap = new Map(categories.map((category) => [category.id, category]));
   const articles = nodes
     .filter(({ config, parent }) => parent && (includeDrafts || config.published === true))
-    .map(({ config, id, parent, hasArticle, html, headings }) => ({
+    .map(({ config, id, parent, thumbnail, hasArticle, html, headings }) => ({
       id,
       category: config.parent,
       parent,
@@ -114,13 +125,13 @@ async function build(changedFile = '') {
       updatedAt: config.updated_at,
       tags: config.tags ?? [],
       media: config.media_label ?? 'NOTE',
-      thumbnail: config.thumbnail ?? '',
+      thumbnail,
       featured: config.featured ?? '',
       type: config.content_type ?? (hasArticle ? 'Article' : 'Index'),
       html,
       headings,
     }))
-    .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+    .sort((a, b) => sortableDate(b).localeCompare(sortableDate(a)));
   for (const article of articles) {
     const category = categoryMap.get(article.category);
     if (category) {
@@ -141,11 +152,45 @@ await build();
 
 if (isWatchMode) {
   console.log('Watching Content for authoring updates…');
-  let timer;
-  const refresh = (filename) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => build(filename ? path.join(contentRoot, filename) : '').catch((error) => console.error(error)), 150);
+  let buildTimer;
+  const changedNodes = new Set();
+  const selfWrites = new Map();
+  const refresh = () => {
+    clearTimeout(buildTimer);
+    buildTimer = setTimeout(() => build().catch((error) => console.error(error)), 150);
   };
+  const nodeDirectoryFor = async (file) => {
+    let directory = path.dirname(file);
+    while (directory.startsWith(contentRoot)) {
+      if (await exists(path.join(directory, 'config.yaml'))) return directory;
+      const parent = path.dirname(directory);
+      if (parent === directory) break;
+      directory = parent;
+    }
+    return null;
+  };
+  const flushUpdates = async () => {
+    if (!touchUpdates || changedNodes.size === 0) return;
+    const directories = [...changedNodes];
+    changedNodes.clear();
+    await Promise.all(directories.map(async (directory) => {
+      const configFile = path.join(directory, 'config.yaml');
+      const config = await readYaml(configFile);
+      config.updated_at = now();
+      selfWrites.set(configFile, Date.now() + 5_000);
+      await writeYaml(configFile, config);
+    }));
+    refresh();
+  };
+  const updateTimer = setInterval(() => flushUpdates().catch((error) => console.error(error)), 60_000);
+  process.once('SIGINT', () => clearInterval(updateTimer));
+  process.once('SIGTERM', () => clearInterval(updateTimer));
   const watcher = watch(contentRoot, { recursive: true });
-  for await (const event of watcher) refresh(event.filename);
+  for await (const event of watcher) {
+    const file = path.join(contentRoot, String(event.filename));
+    if ((selfWrites.get(file) ?? 0) > Date.now()) continue;
+    const directory = await nodeDirectoryFor(file);
+    if (directory) changedNodes.add(directory);
+    refresh();
+  }
 }

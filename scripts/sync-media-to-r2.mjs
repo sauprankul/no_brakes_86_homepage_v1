@@ -7,7 +7,7 @@ const missing = required.filter((name) => !process.env[name]);
 if (missing.length) throw new Error(`Missing required R2 configuration: ${missing.join(', ')}`);
 
 const root = path.join(process.cwd(), 'Content');
-const mediaDirectories = new Set(['data', 'media', 'Downloads']);
+const mediaDirectories = new Set(['data', 'media', 'Media', 'Downloads']);
 const client = new S3Client({
   region: 'auto',
   endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -21,7 +21,7 @@ async function filesIn(directory) {
     if (entry.isDirectory()) return filesIn(fullPath);
     return [fullPath];
   }));
-  return nested.flat().filter((file) => file.split(path.sep).some((part) => mediaDirectories.has(part)));
+  return nested.flat().filter((file) => mediaDirectories.has(path.basename(path.dirname(file))) || /^thumbnail\.(png|jpe?g)$/i.test(path.basename(file)));
 }
 
 const files = await filesIn(root);

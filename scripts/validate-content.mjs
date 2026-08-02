@@ -6,6 +6,7 @@ const contentRoot = path.join(process.cwd(), 'Content');
 const errors = [];
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
 const isDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '') && !Number.isNaN(Date.parse(`${value}T12:00:00Z`));
+const isTimestamp = (value) => isDate(value) || (typeof value === 'string' && !Number.isNaN(Date.parse(value)));
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 async function filesIn(directory) {
@@ -19,6 +20,14 @@ async function filesIn(directory) {
 
 async function exists(file) {
   return access(file).then(() => true).catch(() => false);
+}
+
+async function thumbnailFor(directory, configured) {
+  for (const extension of ['png', 'jpg', 'jpeg']) {
+    const file = `thumbnail.${extension}`;
+    if (await exists(path.join(directory, file))) return `./${file}`;
+  }
+  return configured ?? '';
 }
 
 const configFiles = (await filesIn(contentRoot)).filter((file) => path.basename(file) === 'config.yaml');
@@ -43,17 +52,18 @@ for (const node of nodes) {
   const label = path.relative(process.cwd(), file);
   if (config.parent && !nodeById.has(config.parent)) errors.push(`${label}: parent "${config.parent}" does not exist.`);
   if (config.published !== true) continue;
+  const thumbnail = await thumbnailFor(dir, config.thumbnail);
 
   if (!config.parent) errors.push(`${label}: root nodes are structural and must not be published.`);
   if (!isNonEmptyString(config.subtitle)) errors.push(`${label}: published nodes need a non-empty subtitle.`);
-  if (!isNonEmptyString(config.thumbnail)) errors.push(`${label}: published nodes need a non-empty thumbnail.`);
+  if (!isNonEmptyString(thumbnail)) errors.push(`${label}: published nodes need thumbnail.png, thumbnail.jpg, thumbnail.jpeg, or a non-empty thumbnail field.`);
   if (!isDate(config.published_at)) errors.push(`${label}: published_at must be YYYY-MM-DD for a published node.`);
-  if (!isDate(config.updated_at)) errors.push(`${label}: updated_at must be YYYY-MM-DD for a published node.`);
-  if (isDate(config.published_at) && isDate(config.updated_at) && config.updated_at < config.published_at) errors.push(`${label}: updated_at cannot be before published_at.`);
+  if (!isTimestamp(config.updated_at)) errors.push(`${label}: updated_at must be an ISO date or timestamp for a published node.`);
+  if (isDate(config.published_at) && isTimestamp(config.updated_at) && config.updated_at.slice(0, 10) < config.published_at) errors.push(`${label}: updated_at cannot be before published_at.`);
   if (!Array.isArray(config.tags) || config.tags.some((tag) => !isNonEmptyString(tag))) errors.push(`${label}: tags must be an array of non-empty strings.`);
-  if (isNonEmptyString(config.thumbnail) && !/^(https?:\/\/|\/)/.test(config.thumbnail)) {
-    const thumbnailFile = path.resolve(dir, config.thumbnail);
-    if (!await exists(thumbnailFile)) errors.push(`${label}: thumbnail "${config.thumbnail}" does not exist.`);
+  if (isNonEmptyString(thumbnail) && !/^(https?:\/\/|\/)/.test(thumbnail)) {
+    const thumbnailFile = path.resolve(dir, thumbnail);
+    if (!await exists(thumbnailFile)) errors.push(`${label}: thumbnail "${thumbnail}" does not exist.`);
   }
 }
 

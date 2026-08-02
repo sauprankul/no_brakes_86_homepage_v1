@@ -1,3 +1,5 @@
+import { filterCollection, filtersAreActive } from './scripts/collection-filter.mjs';
+
 /*
   Prototype content deliberately contains navigation metadata and the requester's
   example titles only. Article copy is intentionally left as an author-owned prompt.
@@ -65,7 +67,8 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'n
 
 function categoryById(id) { return categories.find((item) => item.id === id); }
 function articleById(id) { return articles.find((item) => item.id === id); }
-function formatDate(date) { return dateFormatter.format(new Date(`${date}T12:00:00Z`)); }
+function datePart(value) { return String(value ?? '').slice(0, 10); }
+function formatDate(date) { return dateFormatter.format(new Date(datePart(date) === date ? `${date}T12:00:00Z` : date)); }
 function esc(value) { return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character])); }
 
 function thumb(article) {
@@ -76,7 +79,7 @@ function tags(tags) { return `<div class="tags">${tags.map((tag) => `<span class
 
 function articleRow(article, expanded = false) {
   const dateLabel = article.date ? formatDate(article.date) : 'Draft';
-  const updated = article.updatedAt && article.updatedAt !== article.date ? `<span>Updated ${formatDate(article.updatedAt)}</span>` : '';
+  const updated = article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated ${formatDate(article.updatedAt)}</span>` : '';
   return `
     <article class="article-row article-row--clickable" data-article="${article.id}" tabindex="0" aria-label="Open ${esc(article.title)}">
       ${thumb(article)}
@@ -152,7 +155,7 @@ function setBreadcrumb(parts) {
 }
 
 function renderHome() {
-  const newItems = [...articles].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')).slice(0, 5);
+  const newItems = [...articles].sort((a, b) => (b.date ?? b.updatedAt ?? '').localeCompare(a.date ?? a.updatedAt ?? '')).slice(0, 5);
   const hotItems = articles.filter((article) => article.featured === 'hot').slice(0, 5);
   state.category = null;
   state.article = null;
@@ -219,7 +222,6 @@ function mountCollection(id, articleMode) {
   const tagsAvailable = getTagOptions(all);
   const selected = { include: [], exclude: [] };
   const input = (name) => root.querySelector(`[data-filter="${name}"]`);
-  const hasCriteria = () => Boolean(input('text').value.trim() || input('articles-only').value || input('after').value || input('before').value || input('order').value !== 'new' || selected.include.length || selected.exclude.length);
   const paintChips = (kind) => {
     root.querySelector(`[data-tag-chips="${kind}"]`).innerHTML = selected[kind].map((tag) => `<span class="tag-chip">${esc(tag)}<button type="button" data-remove-tag="${kind}" data-tag="${esc(tag)}" aria-label="Remove ${esc(tag)}">×</button></span>`).join('');
   };
@@ -232,17 +234,9 @@ function mountCollection(id, articleMode) {
     options.innerHTML = matches.map((tag) => `<button type="button" data-add-tag="${kind}" data-tag="${esc(tag)}">${esc(tag)}</button>`).join('');
   };
   const update = () => {
-    const active = hasCriteria();
-    const term = input('text').value.trim().toLowerCase();
-    const articlesOnly = input('articles-only').value;
-    const after = input('after').value;
-    const before = input('before').value;
-    const order = input('order').value;
-    const filtered = (active ? all : direct).filter((entry) => {
-      const haystack = [entry.title, entry.subtitle, entry.type, ...entry.tags].join(' ').toLowerCase();
-      const isArticle = entry.hasArticle !== false;
-      return (!term || haystack.includes(term)) && (!articlesOnly || (articlesOnly === 'yes' ? isArticle : !isArticle)) && selected.include.every((tag) => entry.tags.includes(tag)) && !selected.exclude.some((tag) => entry.tags.includes(tag)) && (!after || !entry.date || entry.date >= after) && (!before || !entry.date || entry.date <= before);
-    }).sort((a, b) => order === 'title' ? a.title.localeCompare(b.title) : order === 'old' ? (a.date ?? '').localeCompare(b.date ?? '') : (b.date ?? '').localeCompare(a.date ?? ''));
+    const filters = { text: input('text').value.trim(), articlesOnly: input('articles-only').value, includeTags: selected.include, excludeTags: selected.exclude, after: input('after').value, before: input('before').value, order: input('order').value };
+    const active = filtersAreActive(filters);
+    const filtered = filterCollection({ direct, descendants: all, filters });
     root.querySelector('[data-collection-hint]').hidden = !articleMode || active;
     root.querySelector('[data-filter-count]').hidden = articleMode && !active;
     root.querySelector('[data-clear-filters]').hidden = !active;
@@ -304,7 +298,7 @@ function renderArticle(id) {
   const toc = article.headings?.length ? `<aside class="article-aside"><h2>On this page</h2><ul>${article.headings.map((heading) => `<li class="article-aside__level-${heading.depth}"><a href="#${esc(heading.id)}">${esc(heading.text)}</a></li>`).join('')}</ul></aside>` : '';
   setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: category.name, href: `#category/${category.id}` }, { label: article.title }]);
   main.innerHTML = `
-    <div class="article-info article-info--standalone"><span>${esc(article.type)}</span>${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && article.updatedAt !== article.date ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}</div>
+    <div class="article-info article-info--standalone"><span>${esc(article.type)}</span>${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}</div>
     <div class="article-layout">
       <article class="article-body article-markdown" data-pagefind-body>${article.html || ''}</article>
       ${toc}
@@ -328,7 +322,7 @@ function renderAbout() {
   renderTree();
 }
 
-function route() {
+function route(resetScroll = true) {
   if (dialog.open) dialog.close();
   const hash = window.location.hash.replace(/^#/, '') || 'home';
   const [kind, id] = hash.split('/');
@@ -336,7 +330,7 @@ function route() {
   else if (kind === 'article') renderArticle(id);
   else if (kind === 'about') renderAbout();
   else renderHome();
-  window.scrollTo({ top: 0, behavior: 'instant' });
+  if (resetScroll) window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 function searchableEntries(query) {
@@ -408,14 +402,17 @@ document.querySelector('#sidebar-open').addEventListener('click', () => app.clas
 document.querySelector('#sidebar-close').addEventListener('click', () => app.classList.remove('sidebar-open'));
 window.addEventListener('hashchange', () => { app.classList.remove('sidebar-open'); route(); });
 
-async function loadPublishedContent() {
+let loadedContentAt = '';
+async function loadPublishedContent(refresh = false) {
   try {
     const response = await fetch('/content-index.json', { cache: 'no-store' });
     if (!response.ok) return;
     const content = await response.json();
-    if (Array.isArray(content.categories) && Array.isArray(content.articles) && content.articles.length) {
+    if (Array.isArray(content.categories) && Array.isArray(content.articles) && content.articles.length && content.generated_at !== loadedContentAt) {
       categories = content.categories;
       articles = content.articles;
+      loadedContentAt = content.generated_at;
+      if (refresh) route(false);
     }
   } catch {
     // Opening the static prototype directly from disk has no fetch server; use the fallback.
@@ -423,3 +420,5 @@ async function loadPublishedContent() {
 }
 
 loadPublishedContent().finally(route);
+
+if (import.meta.hot) import.meta.hot.on('content-index-updated', () => loadPublishedContent(true));

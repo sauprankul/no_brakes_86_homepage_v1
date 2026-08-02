@@ -2,3 +2,6 @@ node_modules/
 dist/
 public/content-index.json
 public/downloads/
+**/Downloads/
+**/Media/
+coverage/

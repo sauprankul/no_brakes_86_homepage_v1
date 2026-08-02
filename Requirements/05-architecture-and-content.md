@@ -22,7 +22,7 @@ homepage_v1/
 │  │  └─ why-go-to-the-track/
 │  │     ├─ config.yaml
 │  │     ├─ article.md
-│  │     ├─ media/
+│  │     ├─ Media/
 │  │     ├─ data/
 │  │     └─ Downloads/
 │  ├─ engine-rebuild/
@@ -35,9 +35,11 @@ homepage_v1/
 ├─ .vscode/tasks.json
 ```
 
-Run `npm install` once, then `npm run dev` (or VS Code task **No Brakes: live authoring preview**). Save Markdown in VS Code and the browser preview refreshes. Saving locally never changes the public site: the production update is an automatic static deployment after commit/push to the connected Git repository.
+Run `npm install` once, then `npm run dev` (or VS Code task **No Brakes: live authoring preview**). Save Markdown in VS Code and the browser preview refreshes automatically; no manual browser refresh is required. The Vite development server receives a custom event after the content index is rebuilt and reloads the active rendered entry. Saving locally never changes the public site: the production update is an automatic static deployment after commit/push to the connected Git repository.
 
 The local preview includes drafts so a newly written `article.md` is visible before publishing. The production build includes only `published: true` entries. During either build, `article.md` is converted into sanitized HTML; its level-two/level-three headings become the article table of contents. A relative Markdown link such as `[Setup sheet](./Downloads/setup.csv)` is converted into a download control and its file is copied into the built site.
+
+`test/testdata/` holds synthetic fixtures only. The collection/filter unit suite must never read `Content/`; it enforces 100% statement, branch, function, and line coverage for the direct-child and recursive-filter rules. `test/testdata/long-article.md` is the synthetic authoring performance fixture. Its renderer benchmark establishes whether the local refresh path remains comfortably faster than the file-watcher debounce.
 
 ## Recommended production repository layout
 
@@ -84,7 +86,7 @@ updated_at: null # maintained by the local content watcher
 content_type: series
 tags: [engine, rebuild, gr86]
 featured: hot # omitted when not Hot
-thumbnail: ./media/thumbnail.jpg
+thumbnail: ./thumbnail.png # automatic fallback order: png, jpg, jpeg
 thumbnail_alt: "Author-written description of the image"
 stream_uid: "optional-managed-video-id"
 downloads:
