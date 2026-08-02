@@ -109,14 +109,6 @@ At current published pricing, Stream storage is bought in $5 increments per 1,00
 
 R2 is viable for original files and CSV/AIM downloads: it includes 10 GB-month storage and 10 million Class B reads per month, with no egress charge, but it does **not** do adaptive video encoding by itself. Use R2 + Cloudflare Images for photographs; Images can optimize responsive image variants without storing manual copies. [R2 pricing](https://developers.cloudflare.com/r2/pricing/) and [Cloudflare Images overview](https://developers.cloudflare.com/images/) document the current limits and behavior.
 
-## Publishing workflow
+## Operational guide
 
-1. Create a folder for a new node beneath its topical parent.
-2. Write and save `article.md` in VS Code while `npm run dev` is running. The preview refreshes immediately. Retain raw data and high-resolution originals beside the source, but publish derivative assets intentionally.
-3. Run frontmatter, broken-link, image-alt and production-build validation locally and in CI.
-4. Preview the static build. Verify an article with JavaScript disabled and test video consent/load behavior.
-5. Set `published: true` when ready; the watcher records the initial publish date and the production host deploys after commit/push. Inspect the live canonical URL and structured data.
-
-## Hosting
-
-Start with static hosting on Cloudflare Pages or a comparable CDN host. The platform is not product-critical; the non-negotiables are static deployment, deploy previews, custom headers, HTTPS, cache control, DNS control, exportability and budget alerts. Do not add server functions until a real feature requires them.
+The release process, provider setup, budget controls and branch protection live in [Productionizing No Brakes](../Documentation/productionizing.md). They are operational choices, not product requirements.

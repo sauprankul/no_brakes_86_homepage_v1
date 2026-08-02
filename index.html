@@ -44,7 +44,10 @@
           <nav class="breadcrumb" id="breadcrumb" aria-label="Breadcrumb"></nav>
           <form class="global-search" id="global-search" role="search">
             <label class="sr-only" for="global-search-input">Search the archive</label>
-            <input id="global-search-input" type="search" placeholder="Search articles, parts, tracks…" autocomplete="off" />
+            <div class="global-search__field">
+              <input id="global-search-input" type="search" placeholder="Search articles, parts, tracks…" autocomplete="off" aria-controls="global-search-suggestions" aria-expanded="false" />
+              <div class="search-suggestions" id="global-search-suggestions" role="listbox" hidden></div>
+            </div>
             <button type="submit">Search <span aria-hidden="true">↵</span></button>
           </form>
         </header>
@@ -63,7 +66,7 @@
       </div>
       <form class="search-dialog__form" id="dialog-search-form" role="search">
         <label class="sr-only" for="dialog-search-input">Search the archive</label>
-        <input id="dialog-search-input" type="search" placeholder="Try “brakes”, “Thunderhill”, “oil cooler”…" autocomplete="off" />
+        <div class="search-dialog__field"><input id="dialog-search-input" type="search" placeholder="Try “brakes”, “Thunderhill”, “oil cooler”…" autocomplete="off" /></div>
         <button type="submit">Search</button>
       </form>
       <div class="search-dialog__tips">

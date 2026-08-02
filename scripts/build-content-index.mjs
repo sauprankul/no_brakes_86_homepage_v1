@@ -78,7 +78,7 @@ async function build(changedFile = '') {
   const categoryMap = new Map(categories.map((category) => [category.id, category]));
   const articles = nodes
     .filter(({ config, parent }) => parent && config.published === true)
-    .map(({ file, config, id, parent, hasArticle }) => ({
+    .map(({ config, id, parent, hasArticle }) => ({
       id,
       category: config.parent,
       parent,
@@ -90,8 +90,9 @@ async function build(changedFile = '') {
       updatedAt: config.updated_at,
       tags: config.tags ?? [],
       media: config.media_label ?? 'NOTE',
+      thumbnail: config.thumbnail ?? '',
       featured: config.featured ?? '',
-      type: config.content_type ?? 'Article',
+      type: config.content_type ?? (hasArticle ? 'Article' : 'Index'),
     }))
     .sort((a, b) => b.date.localeCompare(a.date));
   for (const article of articles) {
@@ -118,7 +119,6 @@ if (isWatchMode) {
     clearTimeout(timer);
     timer = setTimeout(() => build(filename ? path.join(contentRoot, filename) : '').catch((error) => console.error(error)), 150);
   };
-  watch(contentRoot, { recursive: true }).then(async (watcher) => {
-    for await (const event of watcher) refresh(event.filename);
-  });
+  const watcher = watch(contentRoot, { recursive: true });
+  for await (const event of watcher) refresh(event.filename);
 }

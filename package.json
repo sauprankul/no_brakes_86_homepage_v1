@@ -7,11 +7,25 @@
     "dev": "node scripts/dev.mjs",
     "content:build": "node scripts/build-content-index.mjs",
     "content:watch": "node scripts/build-content-index.mjs --watch",
+    "validate:content": "node scripts/validate-content.mjs",
+    "media:sync": "node scripts/sync-media-to-r2.mjs",
+    "lint": "eslint .",
+    "lint:md": "markdownlint-cli2",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run validate:content && npm run lint && npm run lint:md && npm run typecheck",
     "build": "node scripts/build-content-index.mjs && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.705.0",
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "globals": "^17.8.0",
+    "markdownlint-cli2": "^0.15.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.18.2",
     "vite": "^6.0.0",
+    "wrangler": "^3.99.0",
     "yaml": "^2.8.0"
   }
 }

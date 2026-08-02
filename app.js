@@ -58,6 +58,7 @@ const dialog = document.querySelector('#search-dialog');
 const dialogInput = document.querySelector('#dialog-search-input');
 const dialogResults = document.querySelector('#dialog-results');
 const globalInput = document.querySelector('#global-search-input');
+const globalSuggestions = document.querySelector('#global-search-suggestions');
 
 const state = { route: 'home', category: null, article: null };
 const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
@@ -87,21 +88,57 @@ function articleRow(article, expanded = false) {
     </article>`;
 }
 
+function directChildren(id) {
+  const node = categoryById(id) || articleById(id);
+  const declared = (node?.children ?? []).map(articleById).filter(Boolean);
+  const nested = articles.filter((article) => article.parent === id);
+  const rootEntries = categoryById(id) ? articles.filter((article) => article.category === id && !article.parent) : [];
+  return [...new Map([...declared, ...nested, ...rootEntries].map((item) => [item.id, item])).values()];
+}
+
+function descendantEntries(id) {
+  const found = [];
+  const visit = (nodeId) => directChildren(nodeId).forEach((child) => {
+    if (found.some((item) => item.id === child.id)) return;
+    found.push(child);
+    visit(child.id);
+  });
+  visit(id);
+  return found;
+}
+
+function nodePathIncludes(id) {
+  let current = state.article || state.category;
+  while (current) {
+    if (current === id) return true;
+    const node = articleById(current);
+    current = node?.parent || (node ? node.category : null);
+  }
+  return false;
+}
+
+function renderTreeItems(parentId, depth = 0) {
+  return directChildren(parentId).map((node) => {
+    const children = directChildren(node.id);
+    const open = nodePathIncludes(node.id);
+    const href = node.hasArticle === false ? `#category/${node.id}` : `#article/${node.id}`;
+    return `<div class="tree__node" style="--tree-depth:${depth}"><a class="tree__article ${nodePathIncludes(node.id) ? 'is-active' : ''}" href="${href}">${esc(node.title)}</a>${children.length ? `<div class="tree__items" ${open ? '' : 'hidden'}>${renderTreeItems(node.id, depth + 1)}</div>` : ''}</div>`;
+  }).join('');
+}
+
 function renderTree() {
   navTree.innerHTML = categories.map((category) => {
-    const children = category.children.map((id) => {
-      const article = articleById(id);
-      return `<a class="tree__article" href="#article/${article.id}" data-article="${article.id}">${esc(article.title)}</a>`;
-    }).join('');
+    const children = renderTreeItems(category.id);
+    const open = nodePathIncludes(category.id);
     return `
       <section class="tree__section">
         <div class="tree__category-row">
-          <button class="tree__collapse" type="button" data-tree-category="${category.id}" aria-label="Collapse ${esc(category.short)}" aria-expanded="true"><span class="tree__caret" aria-hidden="true">⌄</span></button>
+          <button class="tree__collapse" type="button" data-tree-category="${category.id}" aria-label="Toggle ${esc(category.short)}" aria-expanded="${open}"><span class="tree__caret" aria-hidden="true">⌄</span></button>
           <a class="tree__category ${state.category === category.id ? 'is-active' : ''}" href="#category/${category.id}" ${state.category === category.id ? 'aria-current="page"' : ''}>
             <span class="tree__folder" aria-hidden="true">□</span><span>${esc(category.short)}</span><span class="tree__count">${category.count}</span>
           </a>
         </div>
-        <div class="tree__items">${children}</div>
+        <div class="tree__items" ${open ? '' : 'hidden'}>${children}</div>
       </section>`;
   }).join('');
 }
@@ -161,7 +198,8 @@ function renderCategory(id, entriesOverride = null) {
   if (!category) return renderHome();
   state.category = id;
   state.article = null;
-  const categoryArticles = entriesOverride || articles.filter((article) => article.category === id || article.parent === id);
+  const immediateChildren = directChildren(id);
+  const categoryArticles = entriesOverride || descendantEntries(id);
   const tagOptions = getTagOptions(categoryArticles);
   const categoryName = category.name || category.title;
   const categoryShort = category.short || categoryName;
@@ -172,9 +210,12 @@ function renderCategory(id, entriesOverride = null) {
       <h1>${esc(categoryName)}</h1>
       <p>${esc(category.intro || category.subtitle || 'Preview the nodes in this part of the archive.')}</p>
     </header>
-    <section aria-label="Filter ${esc(categoryName)} entries">
+    <section aria-label="${esc(categoryName)} entries">
+      <div class="category-results" id="category-results"></div>
+      ${immediateChildren.length ? `<div class="collection-controls">
       <div class="filters">
         <label><span>Filter entries</span><input id="filter-text" type="search" placeholder="Search title, subtitle or tags…" /></label>
+        <label><span>Show</span><select id="filter-kind"><option value="">All nodes &amp; articles</option><option value="articles">Articles only</option><option value="indexes">Index nodes only</option></select></label>
         <label><span>Include tag</span><select id="filter-include"><option value="">All tags</option>${tagOptions.map((tag) => `<option value="${esc(tag)}">${esc(tag)}</option>`).join('')}</select></label>
         <label><span>Exclude tag</span><select id="filter-exclude"><option value="">No exclusions</option>${tagOptions.map((tag) => `<option value="${esc(tag)}">${esc(tag)}</option>`).join('')}</select></label>
         <label><span>Published after</span><input id="filter-after" type="date" /></label>
@@ -182,11 +223,17 @@ function renderCategory(id, entriesOverride = null) {
         <label><span>Order</span><select id="filter-order"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="title">Title A–Z</option></select></label>
       </div>
       <p class="filter-count" id="filter-count"></p>
-      <div class="category-results" id="category-results"></div>
+      </div>` : ''}
     </section>`;
-  const controls = ['filter-text', 'filter-include', 'filter-exclude', 'filter-after', 'filter-before', 'filter-order'].map((id) => document.querySelector(`#${id}`));
+  if (!immediateChildren.length) {
+    document.querySelector('#category-results').innerHTML = '<div class="empty-state"><strong>No child entries yet.</strong>This node will stay clean until it has something to preview.</div>';
+    renderTree();
+    return;
+  }
+  const controls = ['filter-text', 'filter-kind', 'filter-include', 'filter-exclude', 'filter-after', 'filter-before', 'filter-order'].map((controlId) => document.querySelector(`#${controlId}`));
   const update = () => {
     const term = document.querySelector('#filter-text').value.trim().toLowerCase();
+    const kind = document.querySelector('#filter-kind').value;
     const include = document.querySelector('#filter-include').value;
     const exclude = document.querySelector('#filter-exclude').value;
     const after = document.querySelector('#filter-after').value;
@@ -194,7 +241,7 @@ function renderCategory(id, entriesOverride = null) {
     const order = document.querySelector('#filter-order').value;
     const filtered = categoryArticles.filter((article) => {
       const index = [article.title, article.subtitle, article.type, ...article.tags].join(' ').toLowerCase();
-      return (!term || index.includes(term)) && (!include || article.tags.includes(include)) && (!exclude || !article.tags.includes(exclude)) && (!after || article.date >= after) && (!before || article.date <= before);
+      return (!term || index.includes(term)) && (!kind || (kind === 'articles' ? article.hasArticle !== false : article.hasArticle === false)) && (!include || article.tags.includes(include)) && (!exclude || !article.tags.includes(exclude)) && (!after || article.date >= after) && (!before || article.date <= before);
     }).sort((a, b) => order === 'title' ? a.title.localeCompare(b.title) : order === 'old' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
     document.querySelector('#filter-count').textContent = `${filtered.length} ${filtered.length === 1 ? 'entry' : 'entries'} shown`;
     document.querySelector('#category-results').innerHTML = filtered.length ? filtered.map((article) => articleRow(article, true)).join('') : '<div class="empty-state"><strong>No matching entries.</strong>Try removing a filter or searching a different term.</div>';
@@ -209,9 +256,9 @@ function renderArticle(id) {
   const article = articleById(id);
   if (!article) return renderHome();
   // A node without article.md is an index page: show its child previews by default.
-  if (article.hasArticle !== true) return renderCategory(article.id, articles.filter((child) => child.parent === article.id));
+  if (article.hasArticle === false) return renderCategory(article.id);
   const category = categoryById(article.category);
-  if (!category) return renderCategory(article.id, articles.filter((child) => child.parent === article.id));
+  if (!category) return renderCategory(article.id);
   state.category = category.id;
   state.article = article.id;
   setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: category.name, href: `#category/${category.id}` }, { label: article.title }]);
@@ -263,12 +310,25 @@ function route() {
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
+function searchableEntries(query) {
+  const term = query.trim().toLowerCase();
+  return term ? articles.filter((article) => [article.title, article.subtitle, article.type, categoryById(article.category)?.name ?? '', ...article.tags].join(' ').toLowerCase().includes(term)) : [];
+}
+
 function search(query) {
   const term = query.trim().toLowerCase();
-  const matches = term ? articles.filter((article) => [article.title, article.subtitle, article.type, categoryById(article.category).name, ...article.tags].join(' ').toLowerCase().includes(term)) : [];
+  const matches = searchableEntries(query);
   dialogResults.innerHTML = term
-    ? (matches.length ? matches.map((article) => `<div class="dialog-result"><button type="button" data-search-result="${article.id}"><span class="result-meta">${esc(categoryById(article.category).short)} · ${formatDate(article.date)}</span><strong>${esc(article.title)}</strong><p>${esc(article.subtitle)}</p></button></div>`).join('') : '<div class="empty-state"><strong>No result yet.</strong>Try a track, part, technique or repair.</div>')
+    ? (matches.length ? matches.map((article) => `<div class="dialog-result"><button type="button" data-search-result="${article.id}">${thumb(article)}<span class="result-meta">${esc(categoryById(article.category)?.short ?? 'Archive')} · ${formatDate(article.date)}</span><strong>${esc(article.title)}</strong><p>${esc(article.subtitle)}</p></button></div>`).join('') : '<div class="empty-state"><strong>No result yet.</strong>Try a track, part, technique or repair.</div>')
     : '<div class="empty-state"><strong>Search the archive.</strong>Results will include titles, subtitles, categories and tags.</div>';
+}
+
+let suggestionTimer;
+function updateGlobalSuggestions() {
+  const matches = searchableEntries(globalInput.value).slice(0, 5);
+  globalSuggestions.hidden = matches.length === 0;
+  globalInput.setAttribute('aria-expanded', String(matches.length > 0));
+  globalSuggestions.innerHTML = matches.map((article) => `<button class="search-suggestion" type="button" data-suggestion="${article.id}" role="option">${esc(article.title)}</button>`).join('');
 }
 
 function openSearch(initial = '') {
@@ -284,6 +344,7 @@ document.addEventListener('click', (event) => {
   const articleTarget = event.target.closest('[data-article]');
   const routeTarget = event.target.closest('[data-route]');
   const searchResult = event.target.closest('[data-search-result]');
+  const suggestion = event.target.closest('[data-suggestion]');
   const scrollTarget = event.target.closest('[data-scroll]');
   if (categoryButton) { window.location.hash = `category/${categoryButton.dataset.category}`; }
   if (treeCategory) {
@@ -295,6 +356,7 @@ document.addEventListener('click', (event) => {
   if (articleTarget && !event.target.closest('a')) { window.location.hash = `article/${articleTarget.dataset.article}`; }
   if (routeTarget) { window.location.hash = routeTarget.dataset.route; }
   if (searchResult) { dialog.close(); window.location.hash = `article/${searchResult.dataset.searchResult}`; }
+  if (suggestion) { globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); window.location.hash = `article/${suggestion.dataset.suggestion}`; }
   if (scrollTarget) { document.querySelector(scrollTarget.dataset.scroll)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 });
 
@@ -305,6 +367,11 @@ document.addEventListener('keydown', (event) => {
 });
 
 document.querySelector('#global-search').addEventListener('submit', (event) => { event.preventDefault(); openSearch(globalInput.value); });
+globalInput.addEventListener('input', () => {
+  clearTimeout(suggestionTimer);
+  suggestionTimer = setTimeout(updateGlobalSuggestions, 500);
+});
+globalInput.addEventListener('blur', () => setTimeout(() => { globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); }, 150));
 document.querySelector('#dialog-search-form').addEventListener('submit', (event) => { event.preventDefault(); search(dialogInput.value); });
 dialogInput.addEventListener('input', () => search(dialogInput.value));
 document.querySelector('#search-dialog-close').addEventListener('click', () => dialog.close());
