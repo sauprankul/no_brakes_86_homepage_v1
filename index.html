@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="No Brakes is a fast, searchable field notebook for 86/BRZ track work."
+    />
+    <meta name="theme-color" content="#121315" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="manifest" href="site.webmanifest" />
+    <title>No Brakes — 86/BRZ Field Notes</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <div class="app-shell" id="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Knowledge base navigation">
+        <div class="sidebar__brand">
+          <a href="#home" class="brand" data-route="home" aria-label="No Brakes home">
+            <span class="brand__mark" aria-hidden="true">//</span>
+            <span>NO BRAKES</span>
+          </a>
+          <button class="icon-button sidebar__close" id="sidebar-close" aria-label="Hide navigation">
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+
+        <p class="sidebar__eyebrow">86 / BRZ FIELD NOTES</p>
+        <nav class="tree" id="nav-tree" aria-label="Article categories"></nav>
+
+        <div class="sidebar__footer">
+          <p>Independent notes, data, repairs and track work. Written by the person doing it.</p>
+          <a href="#about" data-route="about">About this archive <span aria-hidden="true">↗</span></a>
+        </div>
+      </aside>
+
+      <div class="content-frame">
+        <header class="topbar">
+          <button class="icon-button menu-button" id="sidebar-open" aria-label="Show navigation">
+            <span aria-hidden="true">☰</span>
+          </button>
+          <nav class="breadcrumb" id="breadcrumb" aria-label="Breadcrumb"></nav>
+          <form class="global-search" id="global-search" role="search">
+            <label class="sr-only" for="global-search-input">Search the archive</label>
+            <input id="global-search-input" type="search" placeholder="Search articles, parts, tracks…" autocomplete="off" />
+            <button type="submit">Search <span aria-hidden="true">↵</span></button>
+          </form>
+        </header>
+
+        <main id="main-content" tabindex="-1"></main>
+      </div>
+    </div>
+
+    <dialog class="search-dialog" id="search-dialog" aria-labelledby="search-dialog-title">
+      <div class="search-dialog__head">
+        <div>
+          <p class="eyebrow">GLOBAL SEARCH</p>
+          <h2 id="search-dialog-title">Find it in the archive</h2>
+        </div>
+        <button class="icon-button" id="search-dialog-close" aria-label="Close search">×</button>
+      </div>
+      <form class="search-dialog__form" id="dialog-search-form" role="search">
+        <label class="sr-only" for="dialog-search-input">Search the archive</label>
+        <input id="dialog-search-input" type="search" placeholder="Try “brakes”, “Thunderhill”, “oil cooler”…" autocomplete="off" />
+        <button type="submit">Search</button>
+      </form>
+      <div class="search-dialog__tips">
+        <span>Searches title, subtitle, tags &amp; article notes</span>
+        <span>Use <kbd>Esc</kbd> to close</span>
+      </div>
+      <div class="dialog-results" id="dialog-results" aria-live="polite"></div>
+    </dialog>
+
+    <template id="thumb-template">
+      <div class="thumb" aria-hidden="true">
+        <span class="thumb__label"></span>
+        <span class="thumb__line thumb__line--one"></span>
+        <span class="thumb__line thumb__line--two"></span>
+        <span class="thumb__corner"></span>
+      </div>
+    </template>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+node_type: article
+id: why-go-to-the-track
+parent: blog
+title: Why should I go to the track?
+subtitle: ''
+content_type: Blog
+published: false
+published_at: null
+updated_at: null
+tags: [track, beginner]
+media_label: BLOG

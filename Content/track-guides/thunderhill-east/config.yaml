@@ -1,0 +1,11 @@
+node_type: article
+id: thunderhill-east
+parent: track-guides
+title: Thunderhill East
+subtitle: ''
+content_type: Track Guide
+published: false
+published_at: null
+updated_at: null
+tags: [track-guide, thunderhill, data]
+media_label: TRACK

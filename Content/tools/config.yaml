@@ -1,0 +1,5 @@
+node_type: category
+id: tools
+title: Tools
+order: 9
+description: Garage, camera and data-analysis tools.

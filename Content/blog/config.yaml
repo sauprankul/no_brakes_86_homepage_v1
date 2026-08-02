@@ -1,0 +1,5 @@
+node_type: category
+id: blog
+title: Blog
+order: 0
+description: Random musings about cars, tracks and the work around them.
