@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { filterCollection, filtersAreActive } from '../../../scripts/collection-filter.mjs';
+import { filterCollection, filtersAreActive, tagOptions } from '../../../scripts/collection-filter.mjs';
 import { descendants, direct } from '../../testdata/collection-fixture.mjs';
 
 const defaults = () => ({ text: '', articlesOnly: '', includeTags: [], excludeTags: [], after: '', before: '', order: 'new' });
@@ -9,6 +9,18 @@ const ids = (entries) => entries.map((entry) => entry.id);
 test('an untouched index collection lists direct children only', () => {
   assert.equal(filtersAreActive(defaults()), false);
   assert.deepEqual(ids(filterCollection({ direct, descendants, filters: defaults() })), ['index-direct', 'article-direct']);
+});
+
+test('numeric YAML tags cannot abort preview-list rendering', () => {
+  assert.deepEqual(tagOptions([{ tags: [2026, 'track'] }, { tags: ['2026', 'race'] }, {}]), ['2026', 'race', 'track']);
+  assert.deepEqual(ids(filterCollection({
+    direct: [
+      { id: 'numeric-tag', title: 'Round', subtitle: '', type: 'Article', tags: [2026], hasArticle: true },
+      { id: 'missing-tags', title: 'Index', subtitle: '', type: 'Index', hasArticle: false },
+    ],
+    descendants: [],
+    filters: defaults(),
+  })), ['numeric-tag', 'missing-tags']);
 });
 
 test('an active query expands candidates to direct and indirect entries', () => {

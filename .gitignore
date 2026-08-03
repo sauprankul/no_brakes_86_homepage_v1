@@ -6,4 +6,5 @@ src/public/downloads/
 **/Downloads/
 **/Media/
 coverage/
+.c8-collection-tmp/
 .vite/

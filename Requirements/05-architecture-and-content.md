@@ -22,6 +22,8 @@ Everything is an entry in the archive. Every entry directory contains exactly on
 
 `npm run dev` is the local VS Code authoring loop. It includes every entry regardless of publication state, gives every unpublished navigation entry a red draft highlight, rebuilds the content index, refreshes the browser, and updates edited entry timestamps once per minute. Its local-only Vite middleware may toggle the current article’s `published` value and persist the required timestamps; it is bound to local development and is absent from the static build. The production build includes only `published: true` entries. If zero entries are published, the generated index and rendered public UI are empty rather than substituting prototype data.
 
+The generated index assigns every entry a title-derived path built from its complete parent hierarchy. The browser router resolves that path to one entry and chooses article or preview-list rendering solely from the generated `hasArticle` value, which itself comes only from the presence of `article.md`. Cloudflare Pages' SPA fallback serves `index.html` for direct requests to these hierarchy paths.
+
 ## Media contract
 
 Each entry may contain these sibling directories:
@@ -62,7 +64,7 @@ The pull-request quality gate validates published content and generated media, l
 
 Search/filter remains static, client-side, and free. Untouched non-article entry pages render every direct child as a preview row. Once a user changes a query or filter, direct and indirect descendants become candidates. Published entries take precedence within every selected sort; an unpublished preview shows a red `Unpublished` tag. Article entries with children show a faint search hint below the article until a criterion becomes active, then show matching direct and indirect descendants.
 
-The sidebar is a compact, one-branch-at-a-time drill-in navigator. It lists only direct children of the current sidebar context, supports an unlimited entry depth, preserves the sidebar width through path truncation, and offers an explicit Back action. Opening a different top-level branch collapses the previously opened one.
+The sidebar is a compact, one-branch-at-a-time drill-in navigator. It lists only direct children of the current sidebar context, supports unlimited entry depth, wraps each path entry in its own indented row, and offers an explicit Collapse action. Opening a different top-level branch collapses the previously opened one.
 
 The public UI uses “entries” and “articles,” never “nodes.” Filters include text, Articles only? (`Any`, `Yes`, `No`), multiple include/exclude tag chips, publication dates, and ordering.
 

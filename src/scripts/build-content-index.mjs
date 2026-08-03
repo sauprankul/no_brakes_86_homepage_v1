@@ -3,6 +3,7 @@ import path from 'node:path';
 import YAML from 'yaml';
 import { renderArticleMarkdown } from './content-compiler.mjs';
 import { directCategoryChildren, rootCategoryId } from './content-hierarchy.mjs';
+import { contentPath } from './content-routes.mjs';
 import { visibleCategories, visibleEntries } from './content-index-visibility.mjs';
 import { IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
 import { contentRoot, publicRoot } from './project-paths.mjs';
@@ -127,18 +128,34 @@ async function build() {
   let categories = nodes
     .filter(({ parent }) => !parent)
     .sort((a, b) => (a.config.order ?? 999) - (b.config.order ?? 999))
-    .map(({ file, config }) => ({
-      id: config.id ?? slugFrom(file),
-      name: config.title,
-      short: config.short_title ?? config.title,
-      published: config.published === true,
+    .map((node) => ({
+      id: node.id,
+      path: contentPath(nodes, node),
+      title: node.config.title,
+      name: node.config.title,
+      short: node.config.short_title ?? node.config.title,
+      published: node.config.published === true,
       count: 0,
-      intro: config.description ?? '',
+      intro: node.config.description ?? '',
       children: [],
+      parent: null,
+      category: node.id,
+      hasArticle: node.hasArticle,
+      subtitle: node.config.subtitle ?? '',
+      date: node.config.published_at,
+      updatedAt: node.config.updated_at,
+      tags: (node.config.tags ?? []).map(String),
+      media: node.config.media_label ?? 'NOTE',
+      thumbnail: node.thumbnail,
+      featured: node.config.featured ?? '',
+      type: node.config.content_type ?? (node.hasArticle ? 'Article' : 'Index'),
+      html: node.html,
+      headings: node.headings,
     }));
   const articles = visibleEntries(nodes, includeDrafts)
     .map(({ config, id, parent, thumbnail, hasArticle, html, headings }) => ({
       id,
+      path: contentPath(nodes, { config, id, parent }),
       category: rootCategoryId(nodes, { id, parent }),
       parent,
       children: [],
@@ -147,7 +164,7 @@ async function build() {
       subtitle: config.subtitle ?? '',
       date: config.published_at,
       updatedAt: config.updated_at,
-      tags: config.tags ?? [],
+      tags: (config.tags ?? []).map(String),
       media: config.media_label ?? 'NOTE',
       thumbnail,
       featured: config.featured ?? '',

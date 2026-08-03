@@ -10,7 +10,7 @@ test('drilled navigation keeps each path entry as a separate full-size row with 
   assert.match(app, /const contextRows = \(context\?\.path \?\? \[\]\)\.map/);
   assert.match(app, /baseClass: 'tree__context'/);
   assert.match(app, />\^ Collapse<\/button>/);
-  assert.match(app, /data-tree-context="\$\{category\.id\}" data-tree-root="\$\{category\.id\}" href="#category\/\$\{category\.id\}"/);
+  assert.match(app, /data-tree-context="\$\{category\.id\}" data-tree-root="\$\{category\.id\}" href="\$\{esc\(entryHref\(category\)\)\}"/);
   assert.match(stylesheet, /\.tree__category, \.tree__context \{ font-size: \.83rem; font-weight: 700; \}/);
   assert.match(stylesheet, /\.tree__label \{ min-width: 0; overflow-wrap: anywhere; white-space: normal;/);
 });

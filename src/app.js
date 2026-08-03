@@ -1,6 +1,7 @@
-import { filterCollection, filtersAreActive } from './scripts/collection-filter.mjs';
+import { filterCollection, filtersAreActive, tagOptions } from './scripts/collection-filter.mjs';
 import { articleHeaderMarkup } from './scripts/article-view.mjs';
 import { selectContentIndex } from './scripts/content-index-client.mjs';
+import { normalizeRoutePath, resolveContentRoute } from './scripts/content-routes.mjs';
 import { hierarchyPath, navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
 import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar } from './scripts/navigation-policy.mjs';
 import { previewPublicationBadge } from './scripts/preview-status.mjs';
@@ -94,7 +95,7 @@ function articleRow(article, expanded = false) {
       ${thumb(article)}
       <div class="article-row__body">
         <p class="article-row__meta"><span>${esc(article.type)}</span>${publication}<span>${dateLabel}</span>${updated}</p>
-        <a class="article-row__title" href="#article/${article.id}" data-article="${article.id}">${esc(article.title)}</a>
+        <a class="article-row__title" href="${esc(entryHref(article))}" data-article="${article.id}">${esc(article.title)}</a>
         <p class="article-row__summary">${esc(article.subtitle)}</p>
         ${tags(expanded ? article.tags : article.tags.slice(0, 3))}
       </div>
@@ -120,45 +121,6 @@ function descendantEntries(id) {
   return found;
 }
 
-/* Legacy nested-tree renderer retained here temporarily for historical context.
-function nodePathIncludes(id) {
-  let current = state.article || state.category;
-  while (current) {
-    if (current === id) return true;
-    const node = articleById(current);
-    current = node?.parent || (node ? node.category : null);
-  }
-  return false;
-}
-
-function renderTreeItems(parentId, depth = 0) {
-  return directChildren(parentId).map((node) => {
-    const children = directChildren(node.id);
-    const open = nodePathIncludes(node.id);
-    const href = node.hasArticle === false ? `#category/${node.id}` : `#article/${node.id}`;
-    return `<div class="tree__node" style="--tree-depth:${depth}"><a class="tree__article ${nodePathIncludes(node.id) ? 'is-active' : ''}" href="${href}">${esc(node.title)}</a>${children.length ? `<div class="tree__items" ${open ? '' : 'hidden'}>${renderTreeItems(node.id, depth + 1)}</div>` : ''}</div>`;
-  }).join('');
-}
-
-function renderTree() {
-  navTree.innerHTML = categories.map((category) => {
-    const children = renderTreeItems(category.id);
-    const open = nodePathIncludes(category.id);
-    return `
-      <section class="tree__section">
-        <div class="tree__category-row">
-          <button class="tree__collapse" type="button" data-tree-category="${category.id}" aria-label="Toggle ${esc(category.short)}" aria-expanded="${open}"><span class="tree__caret" aria-hidden="true">⌄</span></button>
-          <a class="tree__category ${state.category === category.id ? 'is-active' : ''}" href="#category/${category.id}" ${state.category === category.id ? 'aria-current="page"' : ''}>
-            <span class="tree__folder" aria-hidden="true">□</span><span>${esc(category.short)}</span><span class="tree__count">${category.count}</span>
-          </a>
-        </div>
-        <div class="tree__items" ${open ? '' : 'hidden'}>${children}</div>
-      </section>`;
-  }).join('');
-}
-
-*/
-
 function syncTreeToCurrentEntry() {
   const currentId = state.article || state.category;
   const rootId = currentId && (categoryById(currentId) ? currentId : rootIdForEntry(articles, currentId));
@@ -168,7 +130,7 @@ function syncTreeToCurrentEntry() {
 }
 
 function entryHref(entry) {
-  return entry.hasArticle === false ? `#category/${entry.id}` : `#article/${entry.id}`;
+  return entry.path || `/${entry.id}`;
 }
 
 function renderTree() {
@@ -176,7 +138,7 @@ function renderTree() {
     const open = state.treeRoot === category.id;
     const context = open ? sidebarContext({ categories, entries: articles, rootId: category.id, focusId: state.treeFocus }) : null;
     const contextEntry = context?.focus;
-    const contextHref = contextEntry ? entryHref(contextEntry) : `#category/${category.id}`;
+    const contextHref = contextEntry ? entryHref(contextEntry) : entryHref(category);
     const label = category.short;
     const children = context?.children ?? [];
     const limited = navigationChildren(children);
@@ -193,7 +155,7 @@ function renderTree() {
     const seeAll = limited.hasMore ? `<a class="tree__see-all" href="${contextHref}">See all ${children.length} entries →</a>` : '';
     return `
       <section class="tree__section">
-        <a class="${navigationEntryClasses(category, { active: state.category === category.id, baseClass: 'tree__category', previewMode: import.meta.env.DEV })}" data-tree-context="${category.id}" data-tree-root="${category.id}" href="#category/${category.id}" ${state.category === category.id ? 'aria-current="page"' : ''}>
+        <a class="${navigationEntryClasses(category, { active: state.category === category.id, baseClass: 'tree__category', previewMode: import.meta.env.DEV })}" data-tree-context="${category.id}" data-tree-root="${category.id}" href="${esc(entryHref(category))}" ${state.category === category.id ? 'aria-current="page"' : ''}>
           <span class="tree__folder" aria-hidden="true">□</span><span class="tree__label">${esc(label)}</span><span class="tree__count">${category.count}</span>
         </a>
         <div class="tree__items" ${open ? '' : 'hidden'}>${contextRows}${back}${entries}${seeAll}</div>
@@ -203,9 +165,9 @@ function renderTree() {
 
 function breadcrumbParts(id) {
   const path = hierarchyPath(categories, articles, id);
-  return [{ label: 'Home', href: '#home' }, ...path.map((entry, index) => {
+  return [{ label: 'Home', href: '/' }, ...path.map((entry, index) => {
     const final = index === path.length - 1;
-    return { label: entry.name ?? entry.title, href: final ? undefined : (entry.name ? `#category/${entry.id}` : entryHref(entry)) };
+    return { label: entry.name ?? entry.title, href: final ? undefined : entryHref(entry) };
   })];
 }
 
@@ -257,10 +219,6 @@ function renderHome() {
   renderTree();
 }
 
-function getTagOptions(items) {
-  return [...new Set(items.flatMap((article) => article.tags))].sort((a, b) => a.localeCompare(b));
-}
-
 function collectionMarkup(id, articleMode) {
   const placement = articleMode ? 'collection-controls--article' : 'collection-controls--index';
   return `<section class="collection-controls ${placement}" id="collection-${id}" aria-label="Search entries below this page">
@@ -283,7 +241,7 @@ function mountCollection(id, articleMode) {
   const results = document.querySelector('#category-results');
   const direct = directChildren(id);
   const all = descendantEntries(id);
-  const tagsAvailable = getTagOptions(all);
+  const tagsAvailable = tagOptions(all);
   const selected = { include: [], exclude: [] };
   const input = (name) => root.querySelector(`[data-filter="${name}"]`);
   const paintChips = (kind) => {
@@ -334,7 +292,7 @@ function mountCollection(id, articleMode) {
   update();
 }
 
-function renderCategory(id) {
+function renderListPage(id) {
   const category = categoryById(id) || articleById(id);
   if (!category) return renderHome();
   state.category = id;
@@ -350,12 +308,12 @@ function renderCategory(id) {
 }
 
 function renderArticle(id) {
-  const article = articleById(id);
+  const article = articleById(id) || categoryById(id);
   if (!article) return renderHome();
   // A node without article.md is an index page: show its child previews by default.
-  if (article.hasArticle === false) return renderCategory(article.id);
+  if (article.hasArticle === false) return renderListPage(article.id);
   const category = categoryById(article.category);
-  if (!category) return renderCategory(article.id);
+  if (!category) return renderListPage(article.id);
   state.category = category.id;
   state.article = article.id;
   syncTreeToCurrentEntry();
@@ -381,7 +339,7 @@ function renderAbout() {
   state.article = null;
   state.treeRoot = null;
   state.treeFocus = null;
-  setBreadcrumb([{ label: 'Home', href: '#home' }, { label: 'About' }]);
+  setBreadcrumb([{ label: 'Home', href: '/' }, { label: 'About' }]);
   main.innerHTML = `
     <section class="about">
       <p class="eyebrow">ABOUT THIS PROJECT</p>
@@ -394,13 +352,31 @@ function renderAbout() {
 
 function route(resetScroll = true) {
   if (dialog.open) dialog.close();
-  const hash = window.location.hash.replace(/^#/, '') || 'home';
-  const [kind, id] = hash.split('/');
-  if (kind === 'category') renderCategory(id);
-  else if (kind === 'article') renderArticle(id);
-  else if (kind === 'about') renderAbout();
+  const target = resolveContentRoute(categories, articles, window.location.pathname);
+  if (target.type === 'list') renderListPage(target.entry.id);
+  else if (target.type === 'article') renderArticle(target.entry.id);
+  else if (target.type === 'about') renderAbout();
   else renderHome();
   if (resetScroll) window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function navigateTo(path, { replace = false } = {}) {
+  const target = normalizeRoutePath(path);
+  window.history[replace ? 'replaceState' : 'pushState']({}, '', target);
+  app.classList.remove('sidebar-open');
+  route();
+}
+
+function migrateLegacyHashRoute() {
+  const match = window.location.hash.match(/^#(?:category|article)\/(.+)$/);
+  if (match) {
+    const entry = categoryById(match[1]) || articleById(match[1]);
+    if (entry) navigateTo(entryHref(entry), { replace: true });
+  } else if (window.location.hash === '#home') {
+    navigateTo('/', { replace: true });
+  } else if (window.location.hash === '#about') {
+    navigateTo('/about', { replace: true });
+  }
 }
 
 function searchableEntries(query) {
@@ -438,14 +414,17 @@ document.addEventListener('click', async (event) => {
   const treeBack = event.target.closest('[data-tree-back]');
   const devPublish = event.target.closest('[data-dev-publish]');
   const articleTarget = event.target.closest('[data-article]');
-  const routeTarget = event.target.closest('[data-route]');
+  const internalLink = event.target.closest('a[href^="/"]');
   const searchResult = event.target.closest('[data-search-result]');
   const suggestion = event.target.closest('[data-suggestion]');
   const scrollTarget = event.target.closest('[data-scroll]');
   const clickedInsideSidebar = Boolean(event.target.closest('#sidebar'));
   const clickedSidebarToggle = Boolean(event.target.closest('#sidebar-open'));
   if (shouldDismissSidebar({ wide: isWidescreen(window.innerWidth, window.innerHeight), clickedInsideSidebar, clickedToggle: clickedSidebarToggle })) app.classList.remove('sidebar-open');
-  if (categoryButton) { window.location.hash = `category/${categoryButton.dataset.category}`; }
+  if (categoryButton) {
+    const category = categoryById(categoryButton.dataset.category);
+    if (category) navigateTo(entryHref(category));
+  }
   if (treeContext) {
     event.preventDefault();
     const rootId = treeContext.dataset.treeRoot;
@@ -456,7 +435,7 @@ document.addEventListener('click', async (event) => {
       state.treeFocus = contextId === rootId ? null : contextId;
       renderTree();
     } else {
-      window.location.hash = treeContext.getAttribute('href');
+      navigateTo(treeContext.getAttribute('href'));
     }
   }
   if (treeEntry) {
@@ -486,16 +465,31 @@ document.addEventListener('click', async (event) => {
       window.alert(error.message);
     }
   }
-  if (articleTarget && !event.target.closest('a')) { window.location.hash = `article/${articleTarget.dataset.article}`; }
-  if (routeTarget) { window.location.hash = routeTarget.dataset.route; }
-  if (searchResult) { dialog.close(); window.location.hash = `article/${searchResult.dataset.searchResult}`; }
-  if (suggestion) { globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); window.location.hash = `article/${suggestion.dataset.suggestion}`; }
+  if (articleTarget && !event.target.closest('a')) {
+    const article = articleById(articleTarget.dataset.article);
+    if (article) navigateTo(entryHref(article));
+  }
+  if (searchResult) {
+    const article = articleById(searchResult.dataset.searchResult);
+    if (article) { dialog.close(); navigateTo(entryHref(article)); }
+  }
+  if (suggestion) {
+    const article = articleById(suggestion.dataset.suggestion);
+    if (article) { globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); navigateTo(entryHref(article)); }
+  }
   if (scrollTarget) { document.querySelector(scrollTarget.dataset.scroll)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  if (internalLink && !event.defaultPrevented && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+    event.preventDefault();
+    navigateTo(internalLink.getAttribute('href'));
+  }
 });
 
 document.addEventListener('keydown', (event) => {
   const row = event.target.closest?.('.article-row--clickable');
-  if (row && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); window.location.hash = `article/${row.dataset.article}`; }
+  if (row && (event.key === 'Enter' || event.key === ' ')) {
+    const article = articleById(row.dataset.article);
+    if (article) { event.preventDefault(); navigateTo(entryHref(article)); }
+  }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); openSearch(globalInput.value); }
 });
 
@@ -510,7 +504,7 @@ dialogInput.addEventListener('input', () => search(dialogInput.value));
 document.querySelector('#search-dialog-close').addEventListener('click', () => dialog.close());
 document.querySelector('#sidebar-open').addEventListener('click', () => app.classList.add('sidebar-open'));
 document.querySelector('#sidebar-close').addEventListener('click', () => app.classList.remove('sidebar-open'));
-window.addEventListener('hashchange', () => { app.classList.remove('sidebar-open'); route(); });
+window.addEventListener('popstate', () => { app.classList.remove('sidebar-open'); route(); });
 
 let loadedContentAt = '';
 async function loadPublishedContent(refresh = false) {
@@ -530,6 +524,9 @@ async function loadPublishedContent(refresh = false) {
   }
 }
 
-loadPublishedContent().finally(route);
+loadPublishedContent().finally(() => {
+  migrateLegacyHashRoute();
+  route();
+});
 
 if (import.meta.hot) import.meta.hot.on('content-index-updated', () => loadPublishedContent(true));
