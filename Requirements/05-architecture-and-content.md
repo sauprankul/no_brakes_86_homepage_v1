@@ -20,7 +20,7 @@ Everything is an entry in the archive. Every entry directory contains exactly on
 - `article.md`: render authored Markdown as article content;
 - both article and child folders: render the article first and show the child-search controls beneath it.
 
-`npm run dev` is the local VS Code authoring loop. It includes every child entry regardless of publication state, gives unpublished child entries a red navigation highlight, rebuilds the content index, refreshes the browser, and updates edited entry timestamps once per minute. Its local-only Vite middleware may toggle the current article’s `published` value and persist the required timestamps; it is bound to local development and is absent from the static build. The production build includes only `published: true` entries. If zero entries are published, the generated index and rendered public UI are empty rather than substituting prototype data.
+`npm run dev` is the local VS Code authoring loop. It includes every entry regardless of publication state, gives every unpublished navigation entry a red draft highlight, rebuilds the content index, refreshes the browser, and updates edited entry timestamps once per minute. Its local-only Vite middleware may toggle the current article’s `published` value and persist the required timestamps; it is bound to local development and is absent from the static build. The production build includes only `published: true` entries. If zero entries are published, the generated index and rendered public UI are empty rather than substituting prototype data.
 
 ## Media contract
 
@@ -52,11 +52,11 @@ Markdown may reference an original using `./Media/<file>`. The Markdown compiler
 
 Short clips use native `<video>` playback with visible pause/scrub controls, `playsinline`, `preload="metadata"`, and an accessible text alternative. Autoplay, mute, and loop are opt-in per clip. There is one static rendition for MVP; adaptive delivery is explicitly deferred until its quality benefit warrants a revised cost model.
 
-## Content validation and tests
+## Content validation
 
 Published entries must validate title, subtitle, parent, publication state, immutable `published_at`, `updated_at`, tags, thumbnail, thumbnail alt text, and child links from an article to each direct child. A published thumbnail must resolve to generated public media or an intentionally approved external asset.
 
-The required quality gate runs content validation, generated-media validation, JS/TS linting, published-article Markdown linting, type-checking, unit tests, full collection-filter coverage, and a production build. Synthetic fixtures belong in `src/test/testdata/`; feature tests must not depend on production content. The publication suite must prove that an empty generated production index remains empty in the browser and never exposes fallback entries. The media suite must cover source-to-output mapping, image conversion/resizing, manifest generation, generated-output validation, and Markdown media URL rewriting. A repository-boundary test must enforce both the clean root allowlist and the absence of analytics runtime, collector, middleware, endpoint, CSP allowance, and deployment configuration during MVP.
+The pull-request quality gate validates published content and generated media, lints the application and published Markdown, type-checks, and produces a production build.
 
 ## Search and information architecture
 
@@ -64,7 +64,7 @@ Search/filter remains static, client-side, and free. Untouched non-article entry
 
 The sidebar is a compact, one-branch-at-a-time drill-in navigator. It lists only direct children of the current sidebar context, supports an unlimited entry depth, preserves the sidebar width through path truncation, and offers an explicit Back action. Opening a different top-level branch collapses the previously opened one.
 
-The public UI uses “entries” and “articles,” never “nodes.” Filters include text, Articles only? (`Any`, `Yes`, `No`), multiple include/exclude tag chips, publication dates, and ordering. The direct-child/default and recursive/active-filter rules retain 100% statement, branch, function, and line coverage against synthetic fixtures.
+The public UI uses “entries” and “articles,” never “nodes.” Filters include text, Articles only? (`Any`, `Yes`, `No`), multiple include/exclude tag chips, publication dates, and ordering.
 
 ## Deployment
 

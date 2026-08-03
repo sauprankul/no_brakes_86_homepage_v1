@@ -3,7 +3,7 @@ import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 
-const repositoryRoot = path.resolve(import.meta.dirname, '..', '..');
+const repositoryRoot = path.resolve(import.meta.dirname, '..', '..', '..');
 const appRoot = path.join(repositoryRoot, 'src');
 const exists = (file) => access(file).then(() => true).catch(() => false);
 

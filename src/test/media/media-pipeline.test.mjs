@@ -7,7 +7,7 @@ import test from 'node:test';
 import { promisify } from 'node:util';
 import ffmpegPath from 'ffmpeg-static';
 import sharp from 'sharp';
-import { generateSizedMedia, mediaTypeFor, publicMediaPath, sizedMediaRelativePath, validateSizedMedia } from '../scripts/media-pipeline.mjs';
+import { generateSizedMedia, mediaTypeFor, publicMediaPath, sizedMediaRelativePath, validateSizedMedia } from '../../scripts/media-pipeline.mjs';
 
 test('generates a committed-sized JPEG and manifest from an ignored source image', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'no-brakes-media-'));

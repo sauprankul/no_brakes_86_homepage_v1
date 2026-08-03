@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { articleHeaderMarkup } from '../scripts/article-view.mjs';
+import { articleHeaderMarkup } from '../../scripts/article-view.mjs';
 
 test('renders title and subtitle from config data, not article Markdown', () => {
   const html = articleHeaderMarkup({ title: 'Config title', subtitle: 'Config subtitle', type: 'Event' }, '<span>Published</span>');

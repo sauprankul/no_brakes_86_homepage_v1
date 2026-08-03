@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { filterCollection, filtersAreActive } from '../scripts/collection-filter.mjs';
-import { descendants, direct } from './testdata/collection-fixture.mjs';
+import { filterCollection, filtersAreActive } from '../../../scripts/collection-filter.mjs';
+import { descendants, direct } from '../../testdata/collection-fixture.mjs';
 
 const defaults = () => ({ text: '', articlesOnly: '', includeTags: [], excludeTags: [], after: '', before: '', order: 'new' });
 const ids = (entries) => entries.map((entry) => entry.id);

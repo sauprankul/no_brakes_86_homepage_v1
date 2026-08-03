@@ -1,7 +1,8 @@
 import { filterCollection, filtersAreActive } from './scripts/collection-filter.mjs';
 import { articleHeaderMarkup } from './scripts/article-view.mjs';
 import { selectContentIndex } from './scripts/content-index-client.mjs';
-import { navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
+import { hierarchyPath, navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
+import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar } from './scripts/navigation-policy.mjs';
 
 /*
   Prototype content deliberately contains navigation metadata and the requester's
@@ -172,27 +173,34 @@ function renderTree() {
   navTree.innerHTML = categories.map((category) => {
     const open = state.treeRoot === category.id;
     const context = open ? sidebarContext({ categories, entries: articles, rootId: category.id, focusId: state.treeFocus }) : null;
-    const label = context?.path.length
-      ? `${category.short} / ${context.path.map((entry) => entry.title).join(' / ')}`
-      : category.short;
-    const items = context?.children.map((entry) => {
-      const hasChildren = directChildren(entry.id).length > 0;
+    const contextEntry = context?.focus;
+    const contextId = contextEntry?.id ?? category.id;
+    const contextHref = contextEntry ? entryHref(contextEntry) : `#category/${category.id}`;
+    const label = context?.path.length ? `${category.short} / ${context.path.map((entry) => entry.title).join(' / ')}` : category.short;
+    const children = context?.children ?? [];
+    const limited = navigationChildren(children);
+    const entries = limited.visible.map((entry) => {
       const active = state.article === entry.id || state.category === entry.id;
-      return `<div class="tree__entry"><a class="${navigationEntryClasses(entry, { active, previewMode: import.meta.env.DEV })}" href="${entryHref(entry)}" ${active ? 'aria-current="page"' : ''}>${esc(entry.title)}</a>${hasChildren ? `<button class="tree__drill" type="button" data-tree-drill="${entry.id}" aria-label="Show entries within ${esc(entry.title)}"><span aria-hidden="true">›</span></button>` : ''}</div>`;
-    }).join('') ?? '';
-    const back = context?.focus ? `<button class="tree__back" type="button" data-tree-back="${category.id}" aria-label="Go up one level in ${esc(category.short)}">‹</button>` : '';
+      return `<a class="${navigationEntryClasses(entry, { active, previewMode: import.meta.env.DEV })}" data-tree-entry="${entry.id}" href="${entryHref(entry)}" ${active ? 'aria-current="page"' : ''}>${esc(entry.title)}</a>`;
+    }).join('');
+    const back = contextEntry ? `<button class="tree__back" type="button" data-tree-back="${category.id}">← Back</button>` : '';
+    const seeAll = limited.hasMore ? `<a class="tree__see-all" href="${contextHref}">See all ${children.length} entries →</a>` : '';
     return `
       <section class="tree__section">
-        <div class="tree__category-row">
-          <button class="tree__collapse" type="button" data-tree-category="${category.id}" aria-label="Toggle ${esc(category.short)}" aria-expanded="${open}"><span class="tree__caret" aria-hidden="true">⌄</span></button>
-          <a class="tree__category ${state.category === category.id ? 'is-active' : ''}" href="#category/${category.id}" ${state.category === category.id ? 'aria-current="page"' : ''} title="${esc(label)}">
-            <span class="tree__folder" aria-hidden="true">□</span><span class="tree__label">${esc(label)}</span><span class="tree__count">${category.count}</span>
-          </a>
-          ${back}
-        </div>
-        <div class="tree__items" ${open ? '' : 'hidden'}>${items}</div>
+        <a class="${navigationEntryClasses(category, { active: state.category === category.id, baseClass: 'tree__category', previewMode: import.meta.env.DEV })}" data-tree-context="${contextId}" data-tree-root="${category.id}" href="${contextHref}" title="${esc(label)}" ${state.category === category.id ? 'aria-current="page"' : ''}>
+          <span class="tree__folder" aria-hidden="true">□</span><span class="tree__label">${esc(label)}</span><span class="tree__count">${category.count}</span>
+        </a>
+        <div class="tree__items" ${open ? '' : 'hidden'}>${back}${entries}${seeAll}</div>
       </section>`;
   }).join('');
+}
+
+function breadcrumbParts(id) {
+  const path = hierarchyPath(categories, articles, id);
+  return [{ label: 'Home', href: '#home' }, ...path.map((entry, index) => {
+    const final = index === path.length - 1;
+    return { label: entry.name ?? entry.title, href: final ? undefined : (entry.name ? `#category/${entry.id}` : entryHref(entry)) };
+  })];
 }
 
 function setBreadcrumb(parts) {
@@ -209,7 +217,7 @@ function renderHome() {
   state.article = null;
   state.treeRoot = null;
   state.treeFocus = null;
-  setBreadcrumb([{ label: 'Archive' }, { label: 'Home' }]);
+  setBreadcrumb([]);
   main.innerHTML = `
     <section class="hero">
       <div>
@@ -219,7 +227,7 @@ function renderHome() {
       </div>
       <div>
         <p class="hero__copy">A searchable, long-form record for the work behind 86 Challenge. Video lives on YouTube; the evidence, context and notes live here.</p>
-        <div class="hero__note"><strong>${articles.length}</strong><span>published entries in the archive</span></div>
+        <div class="hero__note"><strong>${articles.length}</strong><span>${import.meta.env.DEV ? 'entries in local preview' : 'published entries'}</span></div>
       </div>
     </section>
 
@@ -328,9 +336,8 @@ function renderCategory(id) {
   syncTreeToCurrentEntry();
   const immediateChildren = directChildren(id);
   const categoryName = category.name || category.title;
-  const categoryShort = category.short || categoryName;
-  setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: categoryName }]);
-  main.innerHTML = `<header class="page-header"><p class="eyebrow">ARCHIVE / ${esc(categoryShort)}</p><h1>${esc(categoryName)}</h1><p>${esc(category.intro || category.subtitle || 'Preview the entries in this part of the archive.')}</p></header><section aria-label="${esc(categoryName)} entries">${immediateChildren.length ? collectionMarkup(id, false) : ''}<div class="category-results" id="category-results"></div></section>`;
+  setBreadcrumb(breadcrumbParts(id));
+  main.innerHTML = `<header class="page-header"><h1>${esc(categoryName)}</h1><p>${esc(category.intro || category.subtitle || 'Preview the entries in this part of the archive.')}</p></header><section aria-label="${esc(categoryName)} entries">${immediateChildren.length ? collectionMarkup(id, false) : ''}<div class="category-results" id="category-results"></div></section>`;
   if (immediateChildren.length) mountCollection(id, false);
   else document.querySelector('#category-results').innerHTML = '<div class="empty-state"><strong>No child entries yet.</strong>This page will stay clean until it has something to preview.</div>';
   renderTree();
@@ -348,7 +355,7 @@ function renderArticle(id) {
   syncTreeToCurrentEntry();
   const hasChildren = directChildren(article.id).length > 0;
   const toc = article.headings?.length ? `<aside class="article-aside"><h2>On this page</h2><ul>${article.headings.map((heading) => `<li class="article-aside__level-${heading.depth}"><a href="#${esc(heading.id)}">${esc(heading.text)}</a></li>`).join('')}</ul></aside>` : '';
-  setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: category.name, href: `#category/${category.id}` }, { label: article.title }]);
+  setBreadcrumb(breadcrumbParts(article.id));
   const details = `${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}`;
   const devPublishControl = import.meta.env.DEV ? `<div class="dev-publish" data-dev-publish-control><span>Local preview</span><button type="button" data-dev-publish="${article.id}">${article.published ? 'Unpublish locally' : 'Publish locally'}</button></div>` : '';
   main.innerHTML = `
@@ -368,7 +375,7 @@ function renderAbout() {
   state.article = null;
   state.treeRoot = null;
   state.treeFocus = null;
-  setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: 'About' }]);
+  setBreadcrumb([{ label: 'Home', href: '#home' }, { label: 'About' }]);
   main.innerHTML = `
     <section class="about">
       <p class="eyebrow">ABOUT THIS PROJECT</p>
@@ -420,8 +427,8 @@ function openSearch(initial = '') {
 
 document.addEventListener('click', async (event) => {
   const categoryButton = event.target.closest('[data-category]');
-  const treeCategory = event.target.closest('[data-tree-category]');
-  const treeDrill = event.target.closest('[data-tree-drill]');
+  const treeContext = event.target.closest('[data-tree-context]');
+  const treeEntry = event.target.closest('[data-tree-entry]');
   const treeBack = event.target.closest('[data-tree-back]');
   const devPublish = event.target.closest('[data-dev-publish]');
   const articleTarget = event.target.closest('[data-article]');
@@ -429,14 +436,36 @@ document.addEventListener('click', async (event) => {
   const searchResult = event.target.closest('[data-search-result]');
   const suggestion = event.target.closest('[data-suggestion]');
   const scrollTarget = event.target.closest('[data-scroll]');
+  const clickedInsideSidebar = Boolean(event.target.closest('#sidebar'));
+  const clickedSidebarToggle = Boolean(event.target.closest('#sidebar-open'));
+  if (shouldDismissSidebar({ wide: isWidescreen(window.innerWidth, window.innerHeight), clickedInsideSidebar, clickedToggle: clickedSidebarToggle })) app.classList.remove('sidebar-open');
   if (categoryButton) { window.location.hash = `category/${categoryButton.dataset.category}`; }
-  if (treeCategory) {
-    state.treeRoot = state.treeRoot === treeCategory.dataset.treeCategory ? null : treeCategory.dataset.treeCategory;
-    state.treeFocus = null;
+  if (treeContext) {
+    event.preventDefault();
+    const rootId = treeContext.dataset.treeRoot;
+    const contextId = treeContext.dataset.treeContext;
+    const action = clickAction({ hasChildren: directChildren(contextId).length > 0, expanded: state.treeRoot === rootId });
+    if (action === 'expand') {
+      state.treeRoot = rootId;
+      state.treeFocus = contextId === rootId ? null : contextId;
+      renderTree();
+    } else {
+      window.location.hash = treeContext.getAttribute('href');
+    }
+  }
+  if (treeEntry) {
+    const entry = articleById(treeEntry.dataset.treeEntry);
+    if (entry && directChildren(entry.id).length) {
+      event.preventDefault();
+      state.treeRoot = rootIdForEntry(articles, entry.id);
+      state.treeFocus = entry.id;
+      renderTree();
+    }
+  }
+  if (treeBack) {
+    state.treeFocus = parentFocus(articles, treeBack.dataset.treeBack, state.treeFocus);
     renderTree();
   }
-  if (treeDrill) { state.treeFocus = treeDrill.dataset.treeDrill; renderTree(); }
-  if (treeBack) { state.treeFocus = parentFocus(articles, treeBack.dataset.treeBack, state.treeFocus); renderTree(); }
   if (devPublish) {
     devPublish.disabled = true;
     devPublish.textContent = 'Saving…';

@@ -30,7 +30,7 @@ Every node has a colocated `config.yaml`. Published articles must validate `titl
 
 While `npm run dev` is active, every editable entry is visible regardless of `published`. Article pages in that local Vite preview show a local-only Publish/Unpublish control that writes only the matching entry’s `config.yaml`, preserves an existing `published_at`, and updates `updated_at`. It must not exist in a production build. The regular production build includes only `published: true` entries; an empty published index is a valid public state and must never fall back to fixture, sample, or draft data. The local watcher batches edited entries and writes an ISO `updated_at` timestamp to each affected `config.yaml` once per minute; draft lists sort by that timestamp when they have no publish date.
 
-Every unpublished child entry in the local development navigation has an unmistakable red draft highlight. Production navigation never applies this draft treatment. Synthetic tests must prove both that dev includes published and unpublished child entries and that the draft navigation class is dev-only.
+Every unpublished entry, including a top-level entry, has an unmistakable red draft highlight in local development navigation. Production navigation never applies this draft treatment.
 
 Optional fields: gallery items, official results URL, setup sheet, downloadable files, car configuration, circuit configuration, tire, weather, best lap, part numbers, affiliate disclosure and related articles. Public image/video files are generated from the entry-local `Media/` source directory into committed `SizedMedia/`; raw media is not deployed.
 
@@ -39,9 +39,10 @@ Do not publish an article with a missing thumbnail alt text, empty title or unva
 ## Navigation
 
 - Support every depth of the archive in the left-side navigation without increasing its width. At most one top-level branch is expanded at a time; opening another closes the prior branch.
-- A branch with children has an explicit drill-in control. Drilling into it replaces that branch’s visible list with its direct children; the branch label becomes `Top level / Child / …`, truncates safely, and provides a one-level Back control. This single-path model applies recursively with no depth limit.
+- A first click on a branch expands it in place; clicking its already-expanded context opens that context’s page. A leaf opens immediately. Drilling replaces the branch’s visible list with its direct children; the branch label becomes `Top level / Child / …`, truncates safely, and provides a one-level Back control. This single-path model applies recursively with no depth limit.
+- Show no more than five children for an expanded context. When more exist, a “See all” link opens the context page and its article or preview list.
 - The selected entry and its current navigation path are visually clear. Route changes open the selected entry’s parent context.
-- Breadcrumbs link back through the hierarchy.
+- Breadcrumbs link back through the complete hierarchy, starting with `Home`; Home itself shows no breadcrumb.
 - Each category page has no category selector filter. Entering a category is the category filter.
 
 ## Feeds
@@ -62,7 +63,6 @@ Do not publish an article with a missing thumbnail alt text, empty title or unva
 - Filtering includes text match, an “Articles only?” choice (`Any`, `Yes`, or `No`), multiple include tags, multiple exclude tags, publication date, and ordering. The public interface must use “entries” or “articles”, never the technical word “node”.
 - Include/exclude tags are typeahead text fields: show up to five matching suggestions and represent selected tags as removable chips.
 - Display active filters and result count only after a filter is active. A clear-all action is required when filters are active.
-- The direct-child/default and active-filter/recursive candidate rules are covered with 100% line, function, and branch coverage against synthetic fixtures, never against author content.
 
 ### Phase 2: full-text without an API
 
@@ -73,6 +73,7 @@ Index author article content only: mark the article body with `data-pagefind-bod
 ## Article experience
 
 - Convert each `article.md` directly to sanitized HTML at build time. Do not insert hardcoded gallery, author-note, download, or section placeholder blocks into authored articles.
+- Resolve every article’s top-level category through its full parent chain so nested articles always render their authored Markdown rather than an empty child-preview page.
 - Render an article page’s H1 title and optional subtitle from its `config.yaml`; authors do not need to repeat either in `article.md`.
 - Generate the “On this page” box from the article’s level-two and level-three Markdown headings. Hide it if none exist.
 - A Markdown link to `./Downloads/<file>` renders as an accessible download button and is copied to the built site. The article folder’s `Downloads/` directory contains only intentionally public attachments.

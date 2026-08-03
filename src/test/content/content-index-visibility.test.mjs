@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { visibleCategories, visibleEntries } from '../scripts/content-index-visibility.mjs';
+import { visibleCategories, visibleEntries } from '../../scripts/content-index-visibility.mjs';
 
 test('production hides empty structural categories while dev retains draft authoring context', () => {
   const categories = [{ id: 'published', count: 1 }, { id: 'draft-only', count: 0 }];

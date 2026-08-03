@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import test from 'node:test';
-import { publishedMarkdownFiles } from '../scripts/published-markdown-files.mjs';
+import { publishedMarkdownFiles } from '../../scripts/published-markdown-files.mjs';
 
 test('published Markdown selection excludes draft articles and nodes without article.md', async () => {
   const root = path.join(process.cwd(), 'test', 'testdata', 'published-markdown');

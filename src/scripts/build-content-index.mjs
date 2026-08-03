@@ -2,6 +2,7 @@ import { access, copyFile, mkdir, readFile, readdir, rm, watch, writeFile } from
 import path from 'node:path';
 import YAML from 'yaml';
 import { renderArticleMarkdown } from './content-compiler.mjs';
+import { directCategoryChildren, rootCategoryId } from './content-hierarchy.mjs';
 import { visibleCategories, visibleEntries } from './content-index-visibility.mjs';
 import { IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
 import { contentRoot, publicRoot } from './project-paths.mjs';
@@ -130,15 +131,15 @@ async function build() {
       id: config.id ?? slugFrom(file),
       name: config.title,
       short: config.short_title ?? config.title,
+      published: config.published === true,
       count: 0,
       intro: config.description ?? '',
       children: [],
     }));
-  const categoryMap = new Map(categories.map((category) => [category.id, category]));
   const articles = visibleEntries(nodes, includeDrafts)
     .map(({ config, id, parent, thumbnail, hasArticle, html, headings }) => ({
       id,
-      category: config.parent,
+      category: rootCategoryId(nodes, { id, parent }),
       parent,
       children: [],
       hasArticle,
@@ -156,12 +157,9 @@ async function build() {
       published: config.published === true,
     }))
     .sort((a, b) => sortableDate(b).localeCompare(sortableDate(a)));
-  for (const article of articles) {
-    const category = categoryMap.get(article.category);
-    if (category) {
-      category.children.push(article.id);
-      category.count += 1;
-    }
+  for (const category of categories) {
+    category.children = directCategoryChildren(articles, category.id);
+    category.count = category.children.length;
   }
   for (const node of articles) {
     node.children = articles.filter((article) => article.parent === node.id).map((article) => article.id);

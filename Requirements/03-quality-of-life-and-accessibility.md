@@ -4,7 +4,7 @@
 
 - Target WCAG 2.2 AA: semantic landmarks, one logical H1 per page, descriptive link text, visible keyboard focus, adequate color contrast and no color-only statuses.
 - A visible-on-focus skip link jumps past the fixed navigation to the main article.
-- The navigation drill-in controls use button semantics and descriptive labels; the current path, Back action, and selected entry remain keyboard-accessible. Search results announce updated counts in an `aria-live` region.
+- The navigation’s expand/open links and Back action have descriptive labels and remain keyboard-accessible; the current path and selected entry remain clear. Search results announce updated counts in an `aria-live` region.
 - Support keyboard-only traversal of menus, filters, dialogs, image controls, video activation and downloadable files.
 - Informative images require author-supplied alt text. Decorative images use empty alt text. Do not put key instructions only in images or video.
 - Captions and transcript are mandatory for author-hosted audio/video; YouTube captions must be reviewed or replaced with an accurate transcript.

@@ -6,8 +6,24 @@ function parentId(entry) {
   return entry.parent ?? entry.category ?? null;
 }
 
-export function navigationEntryClasses(entry, { active = false, previewMode = false } = {}) {
-  return ['tree__article', active && 'is-active', previewMode && entry.published !== true && 'is-unpublished'].filter(Boolean).join(' ');
+export function navigationEntryClasses(entry, { active = false, baseClass = 'tree__article', previewMode = false } = {}) {
+  return [baseClass, active && 'is-active', previewMode && entry.published !== true && 'is-unpublished'].filter(Boolean).join(' ');
+}
+
+export function hierarchyPath(categories, entries, id) {
+  const category = categories.find((candidate) => candidate.id === id);
+  if (category) return [category];
+  const chain = [];
+  const visited = new Set();
+  let current = entryById(entries, id);
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    chain.unshift(current);
+    current = entryById(entries, parentId(current));
+  }
+  const rootId = chain.length ? rootIdForEntry(entries, chain[0].id) : null;
+  const root = categories.find((candidate) => candidate.id === rootId);
+  return root ? [root, ...chain] : chain;
 }
 
 export function rootIdForEntry(entries, id) {

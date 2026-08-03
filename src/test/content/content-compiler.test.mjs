@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { renderArticleMarkdown } from '../scripts/content-compiler.mjs';
+import { renderArticleMarkdown } from '../../scripts/content-compiler.mjs';
 
 
 test('renders authored Markdown, a table of contents, and download links', () => {

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import YAML from 'yaml';
-import { togglePublication, togglePublishedEntry } from '../scripts/dev-publish.mjs';
+import { togglePublication, togglePublishedEntry } from '../../scripts/dev-publish.mjs';
 
 test('publishing writes an immutable first publish date and an updated timestamp', () => {
   const first = togglePublication({ id: 'entry', published: false, published_at: null }, '2026-08-03T18:20:00.000Z');
