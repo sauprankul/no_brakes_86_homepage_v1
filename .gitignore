@@ -6,3 +6,6 @@ public/downloads/
 **/Downloads/
 **/Media/
 coverage/
+.env
+.env.*
+!.env.example

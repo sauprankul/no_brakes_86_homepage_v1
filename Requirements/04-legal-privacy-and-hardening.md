@@ -5,7 +5,7 @@ This is a product requirement checklist, not legal advice. Get counsel for juris
 ## Privacy and data retention
 
 - Default posture: do not collect personal data. A static site requires no accounts, user profiles, marketing pixels or behavioral advertising.
-- Use privacy-preserving, cookieless aggregate analytics only if metrics are genuinely useful. Document provider, fields collected, retention, data location, sub-processors and opt-out method before enabling it.
+- Use privacy-preserving, cookieless aggregate analytics only if metrics are genuinely useful. Document provider, fields collected, retention, data location, sub-processors and opt-out method before enabling it. The approved implementation is the first-party Worker/Analytics Engine path in the architecture requirements; it collects no MAC address, IP address, cookie, fingerprint or stable visitor identifier.
 - Prefer server-side aggregate logs with short retention (30 days operational, 90 days security investigation unless legal need requires longer). Restrict access to the owner and delete on schedule.
 - Do not put personal contact details, exact private addresses, keys, credentials, license plates, event attendee information or unpublished telemetry in public source files, images or downloadable data.
 - Add a concise privacy notice before production launch; publish a contact path for privacy requests.
