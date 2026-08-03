@@ -60,7 +60,7 @@ The pull-request quality gate validates published content and generated media, l
 
 ## Search and information architecture
 
-Search/filter remains static, client-side, and free. Untouched non-article entry pages list direct children. Once a user changes a query or filter, direct and indirect descendants become candidates. Article entries with children show a faint search hint below the article until a criterion becomes active, then show matching direct and indirect descendants.
+Search/filter remains static, client-side, and free. Untouched non-article entry pages render every direct child as a preview row. Once a user changes a query or filter, direct and indirect descendants become candidates. Published entries take precedence within every selected sort; an unpublished preview shows a red `Unpublished` tag. Article entries with children show a faint search hint below the article until a criterion becomes active, then show matching direct and indirect descendants.
 
 The sidebar is a compact, one-branch-at-a-time drill-in navigator. It lists only direct children of the current sidebar context, supports an unlimited entry depth, preserves the sidebar width through path truncation, and offers an explicit Back action. Opening a different top-level branch collapses the previously opened one.
 

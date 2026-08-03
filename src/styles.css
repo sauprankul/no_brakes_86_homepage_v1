@@ -109,6 +109,7 @@ main { max-width: 1500px; margin: 0 auto; padding: clamp(26px, 5vw, 76px) clamp(
 .thumb__corner { position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; border-top: 1px solid var(--yellow); border-left: 1px solid var(--yellow); }
 .article-row__body { min-width: 0; }
 .article-row__meta, .result-meta { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 5px; color: var(--subtle); font-size: .64rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.preview-status { display: inline-flex; align-items: center; padding: 2px 6px; color: #ffd7d9; background: #9d2630; border: 1px solid #df5961; border-radius: 2px; font-size: .58rem; font-weight: 900; letter-spacing: .06em; line-height: 1; }
 .article-row__title { display: block; margin: 0; color: #e9ebee; font-size: clamp(.88rem, 1.2vw, 1rem); font-weight: 800; line-height: 1.2; transition: color .12s ease; }
 .article-row__summary { display: -webkit-box; margin: 5px 0 9px; overflow: hidden; color: var(--muted); font-size: .74rem; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }

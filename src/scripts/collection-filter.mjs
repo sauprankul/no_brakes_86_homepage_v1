@@ -19,6 +19,8 @@ export function filterCollection({ direct, descendants, filters }) {
     return true;
   });
   return filtered.sort((a, b) => {
+    const publicationOrder = Number(b.published === true) - Number(a.published === true);
+    if (publicationOrder) return publicationOrder;
     if (filters.order === 'title') return a.title.localeCompare(b.title);
     if (filters.order === 'old') return sortableDate(a).localeCompare(sortableDate(b));
     return sortableDate(b).localeCompare(sortableDate(a));

@@ -3,6 +3,7 @@ import { articleHeaderMarkup } from './scripts/article-view.mjs';
 import { selectContentIndex } from './scripts/content-index-client.mjs';
 import { hierarchyPath, navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
 import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar } from './scripts/navigation-policy.mjs';
+import { previewPublicationBadge } from './scripts/preview-status.mjs';
 
 /*
   Prototype content deliberately contains navigation metadata and the requester's
@@ -87,11 +88,12 @@ function tags(tags) { return `<div class="tags">${tags.map((tag) => `<span class
 function articleRow(article, expanded = false) {
   const dateLabel = article.date ? formatDate(article.date) : 'Draft';
   const updated = article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated ${formatDate(article.updatedAt)}</span>` : '';
+  const publication = previewPublicationBadge(article);
   return `
     <article class="article-row article-row--clickable" data-article="${article.id}" tabindex="0" aria-label="Open ${esc(article.title)}">
       ${thumb(article)}
       <div class="article-row__body">
-        <p class="article-row__meta"><span>${esc(article.type)}</span><span>${dateLabel}</span>${updated}</p>
+        <p class="article-row__meta"><span>${esc(article.type)}</span>${publication}<span>${dateLabel}</span>${updated}</p>
         <a class="article-row__title" href="#article/${article.id}" data-article="${article.id}">${esc(article.title)}</a>
         <p class="article-row__summary">${esc(article.subtitle)}</p>
         ${tags(expanded ? article.tags : article.tags.slice(0, 3))}

@@ -59,6 +59,7 @@ Do not publish an article with a missing thumbnail alt text, empty title or unva
 - Search is case-insensitive, debounced and keyboard accessible.
 - Every page that has direct children exposes the search/filter tool. Index pages place it above the preview list; article pages place it below the Markdown body.
 - An index page initially lists direct children only. Once the visitor changes any query or filter, matching direct and indirect descendants become candidates.
+- Every direct child of a list page renders as a preview row, whether it is an article or another list page. Within every selected order, published entries sort ahead of unpublished entries. Each unpublished preview displays a red `Unpublished` status tag.
 - An article with children initially lists no children and shows only the faint hint “Search for something under this article.” Once the visitor changes any query or filter, matching direct and indirect descendants appear.
 - Filtering includes text match, an “Articles only?” choice (`Any`, `Yes`, or `No`), multiple include tags, multiple exclude tags, publication date, and ordering. The public interface must use “entries” or “articles”, never the technical word “node”.
 - Include/exclude tags are typeahead text fields: show up to five matching suggestions and represent selected tags as removable chips.
