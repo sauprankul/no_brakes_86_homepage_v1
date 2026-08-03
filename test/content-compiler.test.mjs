@@ -22,3 +22,10 @@ test('preserves an approved privacy-enhanced YouTube embed', () => {
   assert.match(rendered.html, /youtube-nocookie\.com\/embed\/5UwIX1HKLgU/);
   assert.match(rendered.html, /allowfullscreen/);
 });
+
+test('maps authored Media image and video references to committed SizedMedia files', () => {
+  const rendered = renderArticleMarkdown('![Corner entry](./Media/corner-entry.heic)\n\n<video controls loop playsinline><source src="./Media/lap.mov" type="video/quicktime"></video>', 'round-1');
+  assert.match(rendered.html, /src="\/media\/round-1\/corner-entry\.jpg"/);
+  assert.match(rendered.html, /src="\/media\/round-1\/lap\.mp4"/);
+  assert.match(rendered.html, /<video controls loop playsinline>/);
+});

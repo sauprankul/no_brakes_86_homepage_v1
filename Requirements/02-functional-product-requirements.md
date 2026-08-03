@@ -30,7 +30,7 @@ Every node has a colocated `config.yaml`. Published articles must validate `titl
 
 While `npm run dev` is active, every editable entry is visible regardless of `published`. The regular production build respects `published: true`. The local watcher batches edited entries and writes an ISO `updated_at` timestamp to each affected `config.yaml` once per minute; draft lists sort by that timestamp when they have no publish date.
 
-Optional fields: YouTube URL, Stream video UID, gallery items, official results URL, setup sheet, downloadable files, car configuration, circuit configuration, tire, weather, best lap, part numbers, affiliate disclosure and related articles.
+Optional fields: gallery items, official results URL, setup sheet, downloadable files, car configuration, circuit configuration, tire, weather, best lap, part numbers, affiliate disclosure and related articles. Public image/video files are generated from the entry-local `Media/` source directory into committed `SizedMedia/`; raw media is not deployed.
 
 Do not publish an article with a missing thumbnail alt text, empty title or unvalidated external URL.
 
@@ -74,8 +74,8 @@ Index author article content only: mark the article body with `data-pagefind-bod
 - Render an article page’s H1 title and optional subtitle from its `config.yaml`; authors do not need to repeat either in `article.md`.
 - Generate the “On this page” box from the article’s level-two and level-three Markdown headings. Hide it if none exist.
 - A Markdown link to `./Downloads/<file>` renders as an accessible download button and is copied to the built site. The article folder’s `Downloads/` directory contains only intentionally public attachments.
-- `Downloads/` and `Media/` are intentionally Git-ignored author workspaces. Each entry’s preview thumbnail is automatically selected from its folder in this priority order: `thumbnail.png`, then `thumbnail.jpg`, then `thumbnail.jpeg`.
-- Support YouTube video embeds with a privacy-enhanced domain (`youtube-nocookie.com`) and a click-to-load thumbnail, not an eager iframe.
+- `Downloads/` and `Media/` are intentionally Git-ignored author workspaces. `SizedMedia/` is generated, validated, and committed. Each entry’s preview/banner thumbnail is generated from `Media/thumbnail.<extension>` as `SizedMedia/thumbnail.jpg`.
+- Support static, directly served native video from `SizedMedia/`: H.264/AAC MP4, smaller dimension at most 480px, at most 30fps, at most 30 seconds, controls enabled, and no automatic high-resolution variant. YouTube embeds remain supported only when the author intentionally chooses an external video.
 - Support responsive author photos, captions, lightbox controls, part-number callouts, warnings, callouts, tables, figures, source links and downloadable data.
 - Data downloads must include file type, size, created date, checksum when meaningful and an accessibility-friendly label.
 - Event pages have links to official results; track guides state the exact layout/configuration; data comparisons declare their variables.

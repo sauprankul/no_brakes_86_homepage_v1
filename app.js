@@ -73,6 +73,7 @@ function formatDate(date) { return dateFormatter.format(new Date(datePart(date) 
 function esc(value) { return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character])); }
 
 function thumb(article) {
+  if (article.thumbnail) return `<div class="thumb thumb--image"><img src="${esc(article.thumbnail)}" alt="" loading="lazy" decoding="async" /></div>`;
   return `<div class="thumb" aria-hidden="true"><span class="thumb__label">${esc(article.media)}</span><span class="thumb__line thumb__line--one"></span><span class="thumb__line thumb__line--two"></span><span class="thumb__corner"></span></div>`;
 }
 

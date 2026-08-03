@@ -2,7 +2,11 @@
 
 ## Scope
 
-This repository is a static, Markdown-authored personal archive. Preserve the `Content/` source-of-truth model, keep `config.yaml` as the metadata contract for every entry, and keep production builds publish-gated. Do not commit author workspaces such as `Downloads/` or `Media/`.
+This repository is a static, Markdown-authored personal archive. Preserve the `Content/` source-of-truth model, keep `config.yaml` as the metadata contract for every entry, and keep production builds publish-gated. `Media/` holds ignored author originals; its deterministic, committed `SizedMedia/` counterpart is the only media that production serves. Do not commit author workspaces such as `Downloads/` or `Media/`.
+
+## Assumption and scope discipline
+
+Before acting on a user request, stop and explicitly push back when the request appears to rest on a factual misunderstanding, contradicts an earlier requirement without acknowledging the tradeoff, or materially expands cost, complexity, security, privacy, or operational risk. Explain the concrete conflict, correct the misunderstanding with evidence where possible, and ask for direction before changing the repository. Do not silently implement a risky or expensive interpretation just because it is technically possible.
 
 ## Verification before handoff
 

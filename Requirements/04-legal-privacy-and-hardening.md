@@ -20,7 +20,8 @@ This is a product requirement checklist, not legal advice. Get counsel for juris
 
 ## Security controls
 
-- Deploy as static files behind a reputable CDN/WAF. There is no public database, login or server-rendered user input path in v1.
+- Deploy as static files on Cloudflare Pages Free behind the Cloudflare Free CDN/WAF. There is no public database, login, Pages Function, Worker, or server-rendered user input path in v1.
+- Enable Bot Fight Mode, a WAF custom rule that blocks non-US traffic for the MVP, and the available Free-plan rate-limit rule. Do not add runtime code merely for these controls.
 - Enforce HTTPS and canonical hostname. Enable HSTS only after confirming all subdomains support HTTPS.
 - Begin with a restrictive Content Security Policy, `frame-ancestors 'none'`, `nosniff`, Referrer-Policy and a narrow Permissions-Policy. The prototype includes a starter `_headers` file; amend CSP only for intentional embeds.
 - Limit embeds to documented allowlisted origins; favor click-to-load YouTube privacy-enhanced embeds. No arbitrary third-party scripts.
@@ -30,14 +31,13 @@ This is a product requirement checklist, not legal advice. Get counsel for juris
 
 ## Abuse resistance
 
-- Static public pages do not need an application rate limiter. Enable CDN/WAF baseline DDoS protection and cache public assets aggressively.
+- Static public pages do not need an application rate limiter. Enable CDN/WAF baseline DDoS protection, Bot Fight Mode, country blocking, and the one available edge rate-limit rule. Cache public assets aggressively.
 - If a contact form or newsletter is introduced, protect it with server-side validation, per-IP rate limits, bot challenge/honeypot, mail abuse controls and no durable submission storage unless necessary.
 - Do not add comments in v1. Comments create moderation, spam, privacy and retention obligations that cut against the project’s goals.
 
 ## Cost controls and recovery
 
-- The public site has a hard planning budget of **$50 USD/month**. Keep full videos on YouTube and use a managed video service only for short clips where adaptive playback materially improves the article.
-- Configure billing alerts at **$25**, **$40** and **$50**. Use a separate project/account tag for this site, review usage monthly, and treat the $50 alert as a stop-and-investigate signal before enabling any new paid media feature.
-- Cloudflare Pages’ published free-plan documentation currently lists limits such as 500 builds/month, 20,000 files/site and a 25 MiB per-file asset cap; recheck before committing to a host. [Cloudflare Pages limits](https://developers.cloudflare.com/pages/platform/limits/)
+- The MVP hosting/CDN variable-spend budget is **$0 USD/month**. Cloudflare Pages Free serves the static application and committed low-resolution media; the domain registration is a separate fixed cost. Do not enable usage-priced Cloudflare products or another delivery provider without an explicit approved change.
+- Full-resolution originals stay local in ignored `Media/`. The pre-commit/CI media gate allows only committed `SizedMedia/` output below the 25 MiB Cloudflare Pages asset cap, with images capped to 1080px on the smaller dimension and videos capped to 480px/30fps/30 seconds. [Cloudflare Pages limits](https://developers.cloudflare.com/pages/platform/limits/)
 - Back up the Git repository, media originals and published build artifacts on a scheduled basis. Practice restoring a deploy and a deleted article.
 - Maintain a plain incident runbook: who revokes tokens, who changes DNS, where backups are, how to place a maintenance page, and how to notify readers if a data or privacy issue occurs.

@@ -1,7 +1,8 @@
-import { access, copyFile, mkdir, readFile, readdir, watch, writeFile } from 'node:fs/promises';
+import { access, copyFile, mkdir, readFile, readdir, rm, watch, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
 import { renderArticleMarkdown } from './content-compiler.mjs';
+import { publicMediaPath } from './media-pipeline.mjs';
 
 const root = process.cwd();
 const contentRoot = path.join(root, 'Content');
@@ -35,10 +36,14 @@ async function exists(file) {
   return access(file).then(() => true).catch(() => false);
 }
 
-async function findThumbnail(directory, configured) {
-  for (const extension of ['png', 'jpg', 'jpeg']) {
-    const file = `thumbnail.${extension}`;
-    if (await exists(path.join(directory, file))) return `./${file}`;
+async function findThumbnail(directory, nodeId, configured) {
+  if (await exists(path.join(directory, 'SizedMedia', 'thumbnail.jpg'))) return `/media/${encodeURIComponent(nodeId)}/thumbnail.jpg`;
+  if (/^\.\/Media\//i.test(configured ?? '')) {
+    try {
+      return publicMediaPath(nodeId, configured);
+    } catch {
+      return '';
+    }
   }
   return configured ?? '';
 }
@@ -67,6 +72,20 @@ async function copyDownloads(directory, nodeId) {
   }
 }
 
+async function copySizedMedia(directory, nodeId) {
+  const sizedDirectory = path.join(directory, 'SizedMedia');
+  try {
+    const files = await filesIn(sizedDirectory);
+    await Promise.all(files.filter((file) => path.basename(file) !== '.media-manifest.json').map(async (file) => {
+      const destination = path.join(root, 'public', 'media', nodeId, path.relative(sizedDirectory, file));
+      await mkdir(path.dirname(destination), { recursive: true });
+      await copyFile(file, destination);
+    }));
+  } catch {
+    // A node only needs SizedMedia when it references authored media.
+  }
+}
+
 async function writeYaml(file, value) {
   await writeFile(file, YAML.stringify(value), 'utf8');
 }
@@ -92,12 +111,13 @@ function slugFrom(file) {
 }
 
 async function build() {
+  await rm(path.join(root, 'public', 'media'), { recursive: true, force: true });
   const configs = (await filesIn(contentRoot)).filter((file) => path.basename(file) === 'config.yaml');
   const entries = await Promise.all(configs.map(async (file) => ({ file, config: await normaliseArticle(file, await readYaml(file)) })));
   const nodes = await Promise.all(entries.map(async ({ file, config }) => {
     const id = config.id ?? slugFrom(file);
     const directory = path.dirname(file);
-    return { file, config, id, parent: config.parent ?? null, thumbnail: await findThumbnail(directory, config.thumbnail), ...(await articleData(directory, id)), directory };
+    return { file, config, id, parent: config.parent ?? null, thumbnail: await findThumbnail(directory, id, config.thumbnail), ...(await articleData(directory, id)), directory };
   }));
   const categories = nodes
     .filter(({ parent }) => !parent)
@@ -142,7 +162,10 @@ async function build() {
   for (const node of articles) {
     node.children = articles.filter((article) => article.parent === node.id).map((article) => article.id);
   }
-  await Promise.all(nodes.filter((node) => includeDrafts || node.config.published === true).map((node) => copyDownloads(node.directory, node.id)));
+  await Promise.all(nodes.filter((node) => includeDrafts || node.config.published === true).map(async (node) => {
+    await copyDownloads(node.directory, node.id);
+    await copySizedMedia(node.directory, node.id);
+  }));
   await mkdir(path.dirname(outputFile), { recursive: true });
   await writeFile(outputFile, `${JSON.stringify({ generated_at: new Date().toISOString(), categories, articles }, null, 2)}\n`, 'utf8');
   console.log(`Content index built: ${articles.length} ${includeDrafts ? 'preview' : 'published'} node(s).`);
