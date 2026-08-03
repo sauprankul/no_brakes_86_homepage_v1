@@ -4,7 +4,7 @@
 
 - Target WCAG 2.2 AA: semantic landmarks, one logical H1 per page, descriptive link text, visible keyboard focus, adequate color contrast and no color-only statuses.
 - A visible-on-focus skip link jumps past the fixed navigation to the main article.
-- The navigation tree uses button semantics with `aria-expanded`; search results announce updated counts in an `aria-live` region.
+- The navigation drill-in controls use button semantics and descriptive labels; the current path, Back action, and selected entry remain keyboard-accessible. Search results announce updated counts in an `aria-live` region.
 - Support keyboard-only traversal of menus, filters, dialogs, image controls, video activation and downloadable files.
 - Informative images require author-supplied alt text. Decorative images use empty alt text. Do not put key instructions only in images or video.
 - Captions and transcript are mandatory for author-hosted audio/video; YouTube captions must be reviewed or replaced with an accurate transcript.
@@ -33,7 +33,7 @@
 - Use native controls before custom widgets. The global full-text enhancement can load after the page becomes readable.
 - Avoid mandatory accounts, cookie walls, autoplay, interstitials, content gating and intrusive ads.
 - Embed video only after user intent; use responsive images with explicit width/height and AVIF/WebP source sets.
-- Responsive short-form video must use adaptive streaming rather than asking authors to encode every device variant manually. The player chooses the appropriate rendition for device/network conditions and still exposes pause and scrub controls.
+- MVP short-form video uses one committed, low-resolution static MP4 derivative with native pause and scrub controls. Adaptive streaming is deferred; the browser must not request a higher-cost rendition.
 - Target current stable Chrome, Edge, Firefox and Safari plus their last previous release. Check layout in iOS Safari and Android Chrome.
 
 ## Performance budgets

@@ -4,10 +4,10 @@ Every navigable entry gets its own folder. Its `config.yaml` is canonical metada
 
 ## Daily writing loop
 
-1. In VS Code, run **No Brakes: live authoring preview** from `.vscode/tasks.json`.
+1. In VS Code, open the `homepage_v1` folder (not its parent), press `Ctrl+Shift+P`, choose **Tasks: Run Task**, then select **No Brakes: live authoring preview**. Use Node.js 22.12.0 or newer; `.nvmrc` records the project version.
 2. Open the localhost address printed in the terminal on the second monitor.
 3. Write in `article.md` and save. The preview refreshes; no deploy is involved.
-4. Set `published: true` in an entry's `config.yaml` when it is ready. The watcher writes `published_at` once, if empty, and preserves it forever. It also creates `updated_at`.
+4. Use the **Publish locally** / **Unpublish locally** control at the top of a local article preview, or edit `published` in its `config.yaml`. The local control does not exist in production. The watcher writes `published_at` once, if empty, and preserves it forever. It also creates `updated_at`.
 5. Any later saved `.md` change to a published article updates `updated_at`. The public template shows it only when it differs from `published_at`.
 6. Commit and push. Cloudflare Pages builds and publishes the static site from Git. The public site does not update merely because VS Code saved a local file.
 

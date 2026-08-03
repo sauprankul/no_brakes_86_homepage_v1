@@ -28,7 +28,7 @@ Every node has a colocated `config.yaml`. Published articles must validate `titl
 
 `published_at` is written once, on the first transition to `published: true`, and must survive an unpublish, move or later edit. `updated_at` records the latest local edit. The article byline shows “Updated” only if its calendar date is different from “Published”.
 
-While `npm run dev` is active, every editable entry is visible regardless of `published`. The regular production build respects `published: true`. The local watcher batches edited entries and writes an ISO `updated_at` timestamp to each affected `config.yaml` once per minute; draft lists sort by that timestamp when they have no publish date.
+While `npm run dev` is active, every editable entry is visible regardless of `published`. Article pages in that local Vite preview show a local-only Publish/Unpublish control that writes only the matching entry’s `config.yaml`, preserves an existing `published_at`, and updates `updated_at`. It must not exist in a production build. The regular production build includes only `published: true` entries; an empty published index is a valid public state and must never fall back to fixture, sample, or draft data. The local watcher batches edited entries and writes an ISO `updated_at` timestamp to each affected `config.yaml` once per minute; draft lists sort by that timestamp when they have no publish date.
 
 Optional fields: gallery items, official results URL, setup sheet, downloadable files, car configuration, circuit configuration, tire, weather, best lap, part numbers, affiliate disclosure and related articles. Public image/video files are generated from the entry-local `Media/` source directory into committed `SizedMedia/`; raw media is not deployed.
 
@@ -36,9 +36,9 @@ Do not publish an article with a missing thumbnail alt text, empty title or unva
 
 ## Navigation
 
-- Render the entire node hierarchy in a left-side tree at all times on desktop.
-- A user can collapse any branch independently; the system must preserve collapse state locally.
-- The selected node and all ancestor branches are visually clear.
+- Support every depth of the archive in the left-side navigation without increasing its width. At most one top-level branch is expanded at a time; opening another closes the prior branch.
+- A branch with children has an explicit drill-in control. Drilling into it replaces that branch’s visible list with its direct children; the branch label becomes `Top level / Child / …`, truncates safely, and provides a one-level Back control. This single-path model applies recursively with no depth limit.
+- The selected entry and its current navigation path are visually clear. Route changes open the selected entry’s parent context.
 - Breadcrumbs link back through the hierarchy.
 - Each category page has no category selector filter. Entering a category is the category filter.
 

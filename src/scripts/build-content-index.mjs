@@ -2,6 +2,7 @@ import { access, copyFile, mkdir, readFile, readdir, rm, watch, writeFile } from
 import path from 'node:path';
 import YAML from 'yaml';
 import { renderArticleMarkdown } from './content-compiler.mjs';
+import { visibleCategories } from './content-index-visibility.mjs';
 import { IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
 import { contentRoot, publicRoot } from './project-paths.mjs';
 
@@ -122,7 +123,7 @@ async function build() {
     const directory = path.dirname(file);
     return { file, config, id, parent: config.parent ?? null, thumbnail: await findThumbnail(directory, id, config.thumbnail), ...(await articleData(directory, id)), directory };
   }));
-  const categories = nodes
+  let categories = nodes
     .filter(({ parent }) => !parent)
     .sort((a, b) => (a.config.order ?? 999) - (b.config.order ?? 999))
     .map(({ file, config }) => ({
@@ -153,6 +154,7 @@ async function build() {
       type: config.content_type ?? (hasArticle ? 'Article' : 'Index'),
       html,
       headings,
+      published: config.published === true,
     }))
     .sort((a, b) => sortableDate(b).localeCompare(sortableDate(a)));
   for (const article of articles) {
@@ -165,6 +167,7 @@ async function build() {
   for (const node of articles) {
     node.children = articles.filter((article) => article.parent === node.id).map((article) => article.id);
   }
+  categories = visibleCategories(categories, includeDrafts);
   await Promise.all(nodes.filter((node) => includeDrafts || node.config.published === true).map(async (node) => {
     await copyDownloads(node.directory, node.id);
     await copySizedMedia(node.directory, node.id);

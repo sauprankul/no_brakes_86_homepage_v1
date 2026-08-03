@@ -21,7 +21,7 @@ The homepage must therefore provide equal visual weight to `New` and `Hot`, side
 
 ## Layout requirements
 
-- The left navigation tree is persistent on desktop and hideable on small screens. Do not replace it with a menu that only lists top-level categories.
+- The left navigation is persistent on desktop and hideable on small screens. It supports unlimited archive depth through a compact drill-in view: only one top-level branch is open, drilling into a child replaces the visible list with that child’s entries, and the label shows the current `Parent / Child` path without widening the sidebar.
 - The top bar is always visible and contains the global search field and a bright search action.
 - Desktop layouts must remain calm up to a 32:9 ultrawide viewport: cap reading lines and keep the page centered rather than stretching article prose.
 - Article page: a wide, readable main column and a short on-page navigation rail. The rail moves above content on mobile.

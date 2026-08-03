@@ -1,10 +1,12 @@
 import { filterCollection, filtersAreActive } from './scripts/collection-filter.mjs';
 import { articleHeaderMarkup } from './scripts/article-view.mjs';
+import { selectContentIndex } from './scripts/content-index-client.mjs';
+import { parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
 
 /*
   Prototype content deliberately contains navigation metadata and the requester's
   example titles only. Article copy is intentionally left as an author-owned prompt.
-*/
+
 const fallbackCategories = [
   { id: 'blog', name: 'Blog', short: 'Blog', count: 4, intro: 'Random musings about cars, tracks and the work around them.', children: ['ca-tire-efficiency-regulation', 'dailying-200tw-tires', 'why-go-to-the-track', 'before-buying-an-86-brz'] },
   { id: 'engine-rebuild', name: 'Engine Rebuild', short: 'Engine Rebuild', count: 3, intro: 'A start-to-finish record of the engine rebuild. Each entry can hold the episode, the supporting evidence, parts, photos and data.', children: ['gr86-engine-blew', 'why-engine-blew', 'long-block-install'] },
@@ -48,10 +50,12 @@ const fallbackArticles = [
   { id: 'obd-analyzer', category: 'tools', title: 'OBD2 Data Analyzer', subtitle: 'Add a clear workflow from raw logging to a useful conclusion.', date: '2026-03-09', tags: ['tools', 'data', 'obd2'], media: 'TOOL', featured: 'hot', type: 'Tool' },
 ];
 
-// `npm run dev` regenerates /content-index.json from the author-owned Content folder.
-// The hard-coded set remains only as a visual fallback while every starter node is a draft.
-let categories = fallbackCategories;
-let articles = fallbackArticles;
+*/
+// A static site always renders from the generated content index. An empty index is
+// the correct public result when every entry is a draft.
+const initialContent = selectContentIndex(null);
+let categories = initialContent.categories;
+let articles = initialContent.articles;
 
 const app = document.querySelector('#app-shell');
 const main = document.querySelector('#main-content');
@@ -63,7 +67,7 @@ const dialogResults = document.querySelector('#dialog-results');
 const globalInput = document.querySelector('#global-search-input');
 const globalSuggestions = document.querySelector('#global-search-suggestions');
 
-const state = { route: 'home', category: null, article: null };
+const state = { route: 'home', category: null, article: null, treeRoot: null, treeFocus: null };
 const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
 function categoryById(id) { return categories.find((item) => item.id === id); }
@@ -113,6 +117,7 @@ function descendantEntries(id) {
   return found;
 }
 
+/* Legacy nested-tree renderer retained here temporarily for historical context.
 function nodePathIncludes(id) {
   let current = state.article || state.category;
   while (current) {
@@ -149,6 +154,47 @@ function renderTree() {
   }).join('');
 }
 
+*/
+
+function syncTreeToCurrentEntry() {
+  const currentId = state.article || state.category;
+  const rootId = currentId && (categoryById(currentId) ? currentId : rootIdForEntry(articles, currentId));
+  if (!rootId) return;
+  state.treeRoot = rootId;
+  state.treeFocus = currentId && !categoryById(currentId) ? parentFocus(articles, rootId, currentId) : null;
+}
+
+function entryHref(entry) {
+  return entry.hasArticle === false ? `#category/${entry.id}` : `#article/${entry.id}`;
+}
+
+function renderTree() {
+  navTree.innerHTML = categories.map((category) => {
+    const open = state.treeRoot === category.id;
+    const context = open ? sidebarContext({ categories, entries: articles, rootId: category.id, focusId: state.treeFocus }) : null;
+    const label = context?.path.length
+      ? `${category.short} / ${context.path.map((entry) => entry.title).join(' / ')}`
+      : category.short;
+    const items = context?.children.map((entry) => {
+      const hasChildren = directChildren(entry.id).length > 0;
+      const active = state.article === entry.id || state.category === entry.id;
+      return `<div class="tree__entry"><a class="tree__article ${active ? 'is-active' : ''}" href="${entryHref(entry)}" ${active ? 'aria-current="page"' : ''}>${esc(entry.title)}</a>${hasChildren ? `<button class="tree__drill" type="button" data-tree-drill="${entry.id}" aria-label="Show entries within ${esc(entry.title)}"><span aria-hidden="true">›</span></button>` : ''}</div>`;
+    }).join('') ?? '';
+    const back = context?.focus ? `<button class="tree__back" type="button" data-tree-back="${category.id}" aria-label="Go up one level in ${esc(category.short)}">‹</button>` : '';
+    return `
+      <section class="tree__section">
+        <div class="tree__category-row">
+          <button class="tree__collapse" type="button" data-tree-category="${category.id}" aria-label="Toggle ${esc(category.short)}" aria-expanded="${open}"><span class="tree__caret" aria-hidden="true">⌄</span></button>
+          <a class="tree__category ${state.category === category.id ? 'is-active' : ''}" href="#category/${category.id}" ${state.category === category.id ? 'aria-current="page"' : ''} title="${esc(label)}">
+            <span class="tree__folder" aria-hidden="true">□</span><span class="tree__label">${esc(label)}</span><span class="tree__count">${category.count}</span>
+          </a>
+          ${back}
+        </div>
+        <div class="tree__items" ${open ? '' : 'hidden'}>${items}</div>
+      </section>`;
+  }).join('');
+}
+
 function setBreadcrumb(parts) {
   breadcrumb.innerHTML = parts.map((part, index) => {
     const item = part.href ? `<a href="${part.href}">${esc(part.label)}</a>` : `<span>${esc(part.label)}</span>`;
@@ -161,6 +207,8 @@ function renderHome() {
   const hotItems = articles.filter((article) => article.featured === 'hot').slice(0, 5);
   state.category = null;
   state.article = null;
+  state.treeRoot = null;
+  state.treeFocus = null;
   setBreadcrumb([{ label: 'Archive' }, { label: 'Home' }]);
   main.innerHTML = `
     <section class="hero">
@@ -171,7 +219,7 @@ function renderHome() {
       </div>
       <div>
         <p class="hero__copy">A searchable, long-form record for the work behind 86 Challenge. Video lives on YouTube; the evidence, context and notes live here.</p>
-        <div class="hero__note"><strong>${articles.length}</strong><span>starter entries in the archive prototype</span></div>
+        <div class="hero__note"><strong>${articles.length}</strong><span>published entries in the archive</span></div>
       </div>
     </section>
 
@@ -277,6 +325,7 @@ function renderCategory(id) {
   if (!category) return renderHome();
   state.category = id;
   state.article = null;
+  syncTreeToCurrentEntry();
   const immediateChildren = directChildren(id);
   const categoryName = category.name || category.title;
   const categoryShort = category.short || categoryName;
@@ -296,12 +345,15 @@ function renderArticle(id) {
   if (!category) return renderCategory(article.id);
   state.category = category.id;
   state.article = article.id;
+  syncTreeToCurrentEntry();
   const hasChildren = directChildren(article.id).length > 0;
   const toc = article.headings?.length ? `<aside class="article-aside"><h2>On this page</h2><ul>${article.headings.map((heading) => `<li class="article-aside__level-${heading.depth}"><a href="#${esc(heading.id)}">${esc(heading.text)}</a></li>`).join('')}</ul></aside>` : '';
   setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: category.name, href: `#category/${category.id}` }, { label: article.title }]);
   const details = `${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}`;
+  const devPublishControl = import.meta.env.DEV ? `<div class="dev-publish" data-dev-publish-control><span>Local preview</span><button type="button" data-dev-publish="${article.id}">${article.published ? 'Unpublish locally' : 'Publish locally'}</button></div>` : '';
   main.innerHTML = `
     ${articleHeaderMarkup(article, details)}
+    ${devPublishControl}
     <div class="article-layout">
       <article class="article-body article-markdown" data-pagefind-body>${article.html || ''}</article>
       ${toc}
@@ -314,6 +366,8 @@ function renderArticle(id) {
 function renderAbout() {
   state.category = null;
   state.article = null;
+  state.treeRoot = null;
+  state.treeFocus = null;
   setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: 'About' }]);
   main.innerHTML = `
     <section class="about">
@@ -364,9 +418,12 @@ function openSearch(initial = '') {
   requestAnimationFrame(() => dialogInput.focus());
 }
 
-document.addEventListener('click', (event) => {
+document.addEventListener('click', async (event) => {
   const categoryButton = event.target.closest('[data-category]');
   const treeCategory = event.target.closest('[data-tree-category]');
+  const treeDrill = event.target.closest('[data-tree-drill]');
+  const treeBack = event.target.closest('[data-tree-back]');
+  const devPublish = event.target.closest('[data-dev-publish]');
   const articleTarget = event.target.closest('[data-article]');
   const routeTarget = event.target.closest('[data-route]');
   const searchResult = event.target.closest('[data-search-result]');
@@ -374,10 +431,25 @@ document.addEventListener('click', (event) => {
   const scrollTarget = event.target.closest('[data-scroll]');
   if (categoryButton) { window.location.hash = `category/${categoryButton.dataset.category}`; }
   if (treeCategory) {
-    const children = treeCategory.parentElement.nextElementSibling;
-    const open = treeCategory.getAttribute('aria-expanded') === 'true';
-    treeCategory.setAttribute('aria-expanded', String(!open));
-    children.hidden = open;
+    state.treeRoot = state.treeRoot === treeCategory.dataset.treeCategory ? null : treeCategory.dataset.treeCategory;
+    state.treeFocus = null;
+    renderTree();
+  }
+  if (treeDrill) { state.treeFocus = treeDrill.dataset.treeDrill; renderTree(); }
+  if (treeBack) { state.treeFocus = parentFocus(articles, treeBack.dataset.treeBack, state.treeFocus); renderTree(); }
+  if (devPublish) {
+    devPublish.disabled = true;
+    devPublish.textContent = 'Saving…';
+    try {
+      const response = await fetch('/__dev/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: devPublish.dataset.devPublish }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not update publication state.');
+      devPublish.textContent = result.entry.published ? 'Published locally' : 'Unpublished locally';
+    } catch (error) {
+      devPublish.disabled = false;
+      devPublish.textContent = 'Try again';
+      window.alert(error.message);
+    }
   }
   if (articleTarget && !event.target.closest('a')) { window.location.hash = `article/${articleTarget.dataset.article}`; }
   if (routeTarget) { window.location.hash = routeTarget.dataset.route; }
@@ -411,14 +483,15 @@ async function loadPublishedContent(refresh = false) {
     const response = await fetch('/content-index.json', { cache: 'no-store' });
     if (!response.ok) return;
     const content = await response.json();
-    if (Array.isArray(content.categories) && Array.isArray(content.articles) && content.articles.length && content.generated_at !== loadedContentAt) {
-      categories = content.categories;
-      articles = content.articles;
+    const selected = selectContentIndex(content);
+    if (content.generated_at !== loadedContentAt) {
+      categories = selected.categories;
+      articles = selected.articles;
       loadedContentAt = content.generated_at;
       if (refresh) route(false);
     }
   } catch {
-    // Opening the static prototype directly from disk has no fetch server; use the fallback.
+    // A static file opened from disk has no content server. Do not expose fixture data.
   }
 }
 
