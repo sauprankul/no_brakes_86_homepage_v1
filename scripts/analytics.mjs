@@ -1,4 +1,4 @@
-const OPT_OUT_KEY = 'no-brakes:analytics-opt-out';
+const OWNER_EXCLUSION_KEY = 'no-brakes:analytics-owner-excluded';
 const EVENT_NAMES = new Set(['page_view', 'page_engagement', 'section_engagement', 'search', 'scroll_depth', 'outbound_click', 'download_click', 'media_progress']);
 
 function finite(value, maximum = 1_000_000) {
@@ -12,15 +12,14 @@ export function normalizeSearchTerm(value) {
   return /^[\p{L}\p{N}\s/+-]+$/u.test(term) ? term : '';
 }
 
-export function applyAnalyticsPreference(search, storage = globalThis.localStorage) {
-  const preference = new URLSearchParams(search).get('analytics');
-  if (preference === 'off') storage?.setItem(OPT_OUT_KEY, 'true');
-  if (preference === 'on') storage?.removeItem(OPT_OUT_KEY);
-  return preference;
+export function excludeOwnerDevice(storage = globalThis.localStorage) {
+  storage?.setItem(OWNER_EXCLUSION_KEY, 'true');
 }
 
+export function includeOwnerDevice(storage = globalThis.localStorage) { storage?.removeItem(OWNER_EXCLUSION_KEY); }
+
 export function analyticsEnabled({ endpoint, isDevelopment = false, storage = globalThis.localStorage } = {}) {
-  return Boolean(endpoint) && !isDevelopment && storage?.getItem(OPT_OUT_KEY) !== 'true';
+  return Boolean(endpoint) && !isDevelopment && storage?.getItem(OWNER_EXCLUSION_KEY) !== 'true';
 }
 
 function sendPayload(endpoint, payload) {

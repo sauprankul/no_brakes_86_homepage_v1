@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { originAllowed, validEvents } from '../analytics-worker/src/collector.mjs';
+import { analyticsCollectionAllowed, originAllowed, validEvents } from '../analytics-worker/src/collector.mjs';
 
 test('collector accepts only bounded, schema-valid aggregate events', () => {
   const events = validEvents({ events: [
@@ -18,5 +18,12 @@ test('collector only permits the configured public origin when an Origin is supp
   const request = (origin) => new Request('https://analytics.example/collect', { headers: origin ? { origin } : {} });
   assert.equal(originAllowed(request('https://no-brakes.example'), 'https://no-brakes.example'), true);
   assert.equal(originAllowed(request('https://other.example'), 'https://no-brakes.example'), false);
-  assert.equal(originAllowed(request(), 'https://no-brakes.example'), true);
+  assert.equal(originAllowed(request(), 'https://no-brakes.example'), false);
+});
+
+test('collector defaults to no analytics persistence for EEA, UK, and Swiss requests', () => {
+  assert.equal(analyticsCollectionAllowed({ cf: { country: 'FR' } }), false);
+  assert.equal(analyticsCollectionAllowed({ cf: { country: 'GB' } }), false);
+  assert.equal(analyticsCollectionAllowed({ cf: { country: 'CH' } }), false);
+  assert.equal(analyticsCollectionAllowed({ cf: { country: 'US' } }), true);
 });

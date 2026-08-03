@@ -1,6 +1,6 @@
 import { filterCollection, filtersAreActive } from './scripts/collection-filter.mjs';
 import { articleHeaderMarkup } from './scripts/article-view.mjs';
-import { applyAnalyticsPreference, createAnalyticsTracker } from './scripts/analytics.mjs';
+import { createAnalyticsTracker } from './scripts/analytics.mjs';
 
 /*
   Prototype content deliberately contains navigation metadata and the requester's
@@ -64,9 +64,7 @@ const dialogResults = document.querySelector('#dialog-results');
 const globalInput = document.querySelector('#global-search-input');
 const globalSuggestions = document.querySelector('#global-search-suggestions');
 
-// Visit `?analytics=off` once on a personal device to persistently exclude it.
 // Development never sends analytics, even if an endpoint has been configured.
-applyAnalyticsPreference(window.location.search);
 const analytics = createAnalyticsTracker({ endpoint: import.meta.env.VITE_ANALYTICS_ENDPOINT ?? '', isDevelopment: import.meta.env.DEV });
 
 const state = { route: 'home', category: null, article: null };

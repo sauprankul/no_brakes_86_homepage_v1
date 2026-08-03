@@ -1,19 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { analyticsEnabled, applyAnalyticsPreference, createAnalyticsTracker, normalizeSearchTerm } from '../scripts/analytics.mjs';
+import { analyticsEnabled, createAnalyticsTracker, excludeOwnerDevice, includeOwnerDevice, normalizeSearchTerm } from '../scripts/analytics.mjs';
 
 function storage() {
   const values = new Map();
   return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: (key) => values.delete(key) };
 }
 
-test('analytics is off without an endpoint, during development, or after a device opt-out', () => {
+test('analytics is off without an endpoint, during development, or on an excluded owner device', () => {
   const local = storage();
   assert.equal(analyticsEnabled({ endpoint: '', storage: local }), false);
   assert.equal(analyticsEnabled({ endpoint: 'https://metrics.example', isDevelopment: true, storage: local }), false);
-  applyAnalyticsPreference('?analytics=off', local);
+  excludeOwnerDevice(local);
   assert.equal(analyticsEnabled({ endpoint: 'https://metrics.example', storage: local }), false);
-  applyAnalyticsPreference('?analytics=on', local);
+  includeOwnerDevice(local);
   assert.equal(analyticsEnabled({ endpoint: 'https://metrics.example', storage: local }), true);
 });
 
