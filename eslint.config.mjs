@@ -3,7 +3,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'node_modules/**', 'public/content-index.json'] },
+  { ignores: ['dist/**', 'node_modules/**', 'public/content-index.json', 'public/media/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

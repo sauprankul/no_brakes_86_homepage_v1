@@ -100,6 +100,8 @@ main { max-width: 1500px; margin: 0 auto; padding: clamp(26px, 5vw, 76px) clamp(
 .article-row--clickable:hover .article-row__title { color: var(--yellow); }
 .thumb { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: linear-gradient(135deg, #2f3439, #17191d 54%, #41464b); border: 1px solid #42464b; }
 .thumb::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 12px, rgb(255 255 255 / .035) 12px 13px); }
+.thumb--image::before { display: none; }
+.thumb--image img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .thumb__label { position: absolute; z-index: 1; top: 7px; left: 7px; color: #f9f1c8; font-size: .54rem; font-weight: 900; letter-spacing: .08em; }
 .thumb__line { position: absolute; right: -12%; bottom: 18%; display: block; width: 82%; height: 2px; background: var(--yellow); transform: rotate(-19deg); box-shadow: 0 7px 0 rgb(235 238 240 / .25); }
 .thumb__line--two { right: 2%; bottom: 38%; width: 50%; background: rgb(245 199 72 / .45); transform: rotate(45deg); }
@@ -169,6 +171,7 @@ main { max-width: 1500px; margin: 0 auto; padding: clamp(26px, 5vw, 76px) clamp(
 .article-body a { color: var(--yellow); text-decoration: underline; text-underline-offset: 3px; }
 .article-body ul, .article-body ol { color: #b4bac1; }
 .article-body pre { overflow-x: auto; padding: 14px; background: #17191c; border: 1px solid var(--line); }
+.article-video { display: block; width: 100%; aspect-ratio: 16 / 9; margin: 24px 0; border: 1px solid var(--line); border-radius: 5px; }
 .download-link { display: inline-flex; align-items: center; gap: 11px; min-width: 235px; padding: 11px 13px; color: var(--ink) !important; background: #1b1e22; border: 1px solid #41464c; border-radius: 5px; text-decoration: none !important; }
 .download-link:hover { border-color: var(--yellow); background: #24272b; }
 .download-link__icon { display: grid; width: 29px; height: 29px; place-items: center; color: #1c180b; background: var(--yellow); border-radius: 3px; font-size: 1.1rem; font-weight: 900; }

@@ -23,6 +23,4 @@ Open the localhost address printed by Vite on the second monitor. Save a `Conten
 
 ## Production direction
 
-The production project should move the metadata currently at the top of `app.js` into local Markdown/MDX content collections in Astro. See [Requirements/05-architecture-and-content.md](Requirements/05-architecture-and-content.md) for the recommended folder and frontmatter model.
-
-Before publishing, replace both `YOUR-DOMAIN.example` entries, add an icon, and test the final CSP against the actual YouTube and analytics domains in use.
+Cloudflare Pages deploys the static `dist/` output from GitHub. No Worker, R2 bucket, image CDN, or video CDN is required for the MVP. See [Productionizing No Brakes](Documentation/productionizing.md) for the exact Cloudflare dashboard steps and [architecture requirements](Requirements/05-architecture-and-content.md) for the generated-media contract.

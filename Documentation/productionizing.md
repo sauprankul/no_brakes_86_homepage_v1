@@ -1,54 +1,171 @@
-# Productionizing No Brakes
+# Productionizing No Brakes: static Cloudflare Pages MVP
 
-This is the operating guide for the site. It is intentionally separate from the product requirements: requirements describe the product; this document describes how code and content safely reach production.
+This is the launch operating guide for `nobrakes86.com`. It deliberately uses no server, database, Pages Function, R2 bucket, image-transformation service, or video CDN. Cloudflare Pages is still a global CDN: it serves the already-built static site and committed, low-resolution media from its edge network.
 
-## Chosen stack
+The site is premium where readers notice it—fast static pages, responsive layout, accessible native video controls, search, and carefully prepared media—not where a small archive gains little from dynamic infrastructure.
 
-- **GitHub** is the source of truth and review gate.
-- **Cloudflare Pages** hosts the built static site on its CDN.
-- **Cloudflare Stream** serves the short looping video clips with adaptive bitrate playback. Do not self-host multiple video renditions or use YouTube for these clips.
-- **Cloudflare Images backed by R2** serves responsive thumbnails/photos. R2 also stores downloadable source data and originals; it is not the video transcoder.
+## The decision and its boundaries
 
-This keeps the site static, avoids a server/database, and concentrates billing in one provider. R2 Standard is currently $0.015/GB-month with no egress charge, and its first 10 GB-month is included. Cloudflare Images' free tier includes 5,000 unique transformations per month. Stream is metered by stored and delivered minutes, so it needs an explicit budget ceiling. See [R2 pricing](https://developers.cloudflare.com/r2/pricing/), [Images pricing](https://developers.cloudflare.com/images/pricing/), and [Cloudflare billing](https://developers.cloudflare.com/billing/understand/how-billing-works/).
+- **Cloudflare Pages Free** hosts `dist/` directly from GitHub. Static-asset requests are free and unlimited. [Pages pricing](https://developers.cloudflare.com/pages/functions/pricing/)
+- **Cloudflare Free zone** for `nobrakes86.com` provides DNS, TLS, CDN, DDoS protection, Bot Fight Mode, one rate-limit rule, and WAF custom rules. Cloudflare provides unmetered DDoS protection on every plan. [DDoS protection](https://developers.cloudflare.com/ddos-protection/about/)
+- `Media/` contains full-resolution local originals and is Git-ignored. `SizedMedia/` contains generated, versioned public derivatives and is committed to Git.
+- Images are generated as JPEG with the smallest dimension no larger than 1080px. Videos are generated as H.264/AAC MP4 with the smallest dimension no larger than 480px, at no more than 30fps and no more than 30 seconds long.
+- Every deployed static asset must be at or below Cloudflare Pages' 25 MiB per-file limit. [Pages limits](https://developers.cloudflare.com/pages/platform/limits/)
 
-## One-time account setup
+This avoids an attack-driven usage invoice because there are no usage-priced services in the request path. The remaining money is the fixed domain renewal you already chose at Cloudflare Registrar. Do not enable R2, Images Paid, Stream, Argo, Cache Reserve, Workers Paid, or any other usage-priced add-on without revising this guide and the requirements first.
 
-1. Create a Cloudflare account with a payment method and add the production domain there. Enable MFA and keep recovery codes outside the repository.
-2. Create a Pages project named `no-brakes` (or choose another stable name). The workflow deploys the generated `dist/` directory using `wrangler pages deploy`, the documented static deploy command. Do not connect Pages' own Git integration; GitHub Actions is the one deployment authority. [Pages deploy command](https://developers.cloudflare.com/workers/wrangler/commands/pages/)
-3. Create an R2 bucket named `no-brakes-media` for original photos, thumbnails, and downloads. Use a custom public media hostname only for approved derived public assets; keep originals private.
-4. Enable Cloudflare Images with R2 as the source for public images. Store a single decent-quality original and request responsive variants at delivery time.
-5. Enable Stream. Upload each <30-second clip to Stream and place its Stream UID in the node config. The site player should loop, expose native pause/scrub controls, and use Stream's HLS adaptive playback.
-6. In Cloudflare Billing, set a **$50/month** budget ceiling. Create notifications at **$25, $40, and $50**. Also set product-specific Stream usage notifications below the $50 limit because usage-based charges bill after the measured period.
+## What not to create in Cloudflare
 
-## GitHub protection and release flow
+You do **not** need to create a Worker. A Worker is server-side JavaScript that runs for a request; this site is static and does not need it.
 
-1. Push this workflow once. On GitHub, open **Settings → Rules → Rulesets**, target `main`, and require pull requests.
-2. Require the `quality` status check, require the branch to be up to date, require resolved conversations, block force pushes and deletion, and restrict direct pushes. GitHub requires successful checks before a protected branch can merge. [GitHub protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
-3. As a solo maintainer, do **not** require an approving review: GitHub cannot self-approve it. Keep an intentional administrator bypass for emergencies, but use it sparingly.
-4. Add a GitHub Environment named `production`. Require a manual approval there if you want a deliberate release pause; otherwise leave it unrestricted for automatic deployment after a merge.
-5. Create a Cloudflare API token scoped only to the Pages project (and, once media synchronization is enabled, the specific R2 bucket / Stream account). Store it as `CLOUDFLARE_API_TOKEN`; add `CLOUDFLARE_ACCOUNT_ID` as a secret and `CLOUDFLARE_PAGES_PROJECT` as an environment variable. Never commit credentials or `.dev.vars`.
+The correct dashboard path is:
 
-The committed workflow runs `npm ci`, content validation, JS/TS linting, Markdown linting, type-checking, and the production build for every PR to `main`. A successful push to `main` reruns the same checks, then deploys `dist/` to Pages. The `quality` check should be the required GitHub status check. Required checks must pass on the current PR commit. [GitHub status checks](https://docs.github.com/en/enterprise-cloud@latest/pull-requests/reference/status-checks)
+1. Open **Compute -> Workers & Pages**.
+2. Select **Create application**.
+3. Select **Pages**, not Workers.
+4. Select **Connect to Git**.
 
-## Content contract and local workflow
+Cloudflare's Pages Git integration documentation uses exactly this path. It connects the repository and performs the Pages build/deploy after a Git push; it does not require a Worker. [Cloudflare Pages Git integration](https://developers.cloudflare.com/pages/get-started/git-integration/)
 
-Run `npm run dev` while editing. It rebuilds the local index and Vite refreshes the browser; it never publishes anything. Before opening a PR, run `npm run check` and `npm run build`.
+## One-time repository setup
 
-The validator rejects duplicate/missing IDs, missing parents, incomplete published-node metadata, invalid dates, missing local thumbnail files, and article nodes that have children but do not link to each child. A published node needs `title`, `subtitle`, `thumbnail`, `published_at`, `updated_at`, and valid tags. The initial `published_at` stays immutable; later edits change only `updated_at`.
+Run the following once from the repository root:
 
-## Media release discipline
+```powershell
+npm install
+```
 
-The deploy workflow uploads approved `Content/**/media/**` and `Content/**/data/**` files to R2 before it deploys Pages. Enable it by setting the `CLOUDFLARE_R2_BUCKET` GitHub Environment variable and the two R2 access-key secrets. It only uploads; it never deletes remote media. Before the first public video/image release:
+`npm install` configures this repository's Git hook path. Verify it with:
 
-- Put photos/thumbnails in a node's `media/` folder, upload only the approved derivative to R2/Images, and write its public URL/ID back into `config.yaml`.
-- Upload video clips to Stream, wait for ready status, then commit the returned Stream UID in the node config. Do not merge an unpublished Stream UID.
-- Keep raw GoPro footage and large working files out of Git; retain them locally and/or private R2.
-- Keep only approved derivatives in those `media/` and `data/` folders. This prevents CI from blindly publishing raw footage.
+```powershell
+git config --get core.hooksPath
+# Expected: .githooks
+```
 
-## Routine operations
+The committed repository layout for a media-bearing entry is:
 
-- Open a branch, edit content/code, run `npm run check`, then open a PR to `main`.
-- Review the Pages deploy preview or local production build.
-- Merge only after `quality` is green. The production job publishes the static site.
-- Check Cloudflare billing monthly and after a video-heavy event. Reduce Stream clips/bitrate or pull a clip if usage approaches $40.
-- Back up the repository and private R2 originals periodically. The site remains rebuildable from Git plus private media.
+```text
+Content/
+  86-challenge/
+    2026/
+      round-1-thunderhill-east-cyclone/
+        config.yaml
+        article.md
+        Media/                 # full-resolution local originals; ignored by Git
+          thumbnail.heic
+          lap-01.mov
+        SizedMedia/            # generated public derivatives; committed to Git
+          .media-manifest.json
+          thumbnail.jpg
+          lap-01.mp4
+```
+
+Use `Media/` only for these author-owned source extensions: `.jpg`, `.jpeg`, `.png`, `.heic`, `.heif`, `.mov`, `.mp4`, `.m4v`, and `.webm`. Do not put sidecars, raw telemetry, or arbitrary working files there.
+
+On every commit, the pre-commit hook:
+
+1. Scans every local `Content/**/Media/` directory.
+2. Generates or refreshes its `SizedMedia/` counterpart.
+3. Rejects an unsupported or failed conversion.
+4. Rejects output over 25 MiB, image output whose smallest dimension exceeds 1080px, video output whose smallest dimension exceeds 480px, video above 30fps, or video longer than 30 seconds.
+5. Stages only generated `SizedMedia/` files and their manifest.
+
+The hook never stages the ignored source originals. Run the same operation manually at any time:
+
+```powershell
+npm run media:prepare
+npm run media:validate
+```
+
+`media:prepare` generates current derivatives. `media:validate` validates only committed-style `SizedMedia/` output, so it also works in GitHub Actions and Cloudflare Pages, where local originals do not exist.
+
+## Authoring media
+
+Put the original asset in the node's `Media/` directory, then reference that source path in authored Markdown. The renderer replaces it with its generated public equivalent:
+
+```markdown
+![Brake trace at turn-in](./Media/brake-trace.heif)
+
+<video controls loop muted playsinline preload="metadata">
+  <source src="./Media/lap-01.mov" type="video/quicktime">
+  Your browser does not support this video.
+</video>
+```
+
+The produced HTML refers to `/media/<node-id>/brake-trace.jpg` and `/media/<node-id>/lap-01.mp4`, never to `Media/`. Use H.264/AAC MP4—not H.265/HEVC—for the generated video: H.264/AAC in MP4 is the practical compatibility target for broad browser playback, while HEVC has material support gaps outside Apple platforms. [MDN codec selection](https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API/Codec_selection)
+
+For a preview/banner image, name the original `Media/thumbnail.<extension>`. The generated `SizedMedia/thumbnail.jpg` is automatically used for the preview and article-banner asset. A config may explicitly state the original source for clarity:
+
+```yaml
+thumbnail: ./Media/thumbnail.heic
+```
+
+Do not hand-edit `SizedMedia/` or its `.media-manifest.json`. Change the source in `Media/`, run `npm run media:prepare`, and commit the generated result. `git status` should show `SizedMedia/` changes but never a `Media/` original.
+
+## Cloudflare Pages deployment: click-by-click
+
+1. Sign in to the Cloudflare account that owns `nobrakes86.com`.
+2. Open **Compute -> Workers & Pages -> Create application -> Pages -> Connect to Git**.
+3. Choose GitHub, select **Install & Authorize**, and grant the Cloudflare Workers and Pages GitHub App access only to `sauprankul/no_brakes_86_homepage_v1`.
+4. Select that repository. Use a project name such as `no-brakes-86` and set **Production branch** to `main`.
+5. In build configuration, select **None** for the framework preset. Set:
+
+   | Setting | Value |
+   | --- | --- |
+   | Build command | `npm ci && npm run check && npm run build` |
+   | Build output directory | `dist` |
+   | Root directory | leave blank |
+
+6. In the build environment-variable area, add these plain-text variables for both **Production** and **Preview**:
+
+   | Variable | Value | Why |
+   | --- | --- | --- |
+   | `NODE_VERSION` | `22.12.0` | Pins the supported Node runtime instead of relying on a changing build-image default. |
+   | `SKIP_DEPENDENCY_INSTALL` | `1` | Prevents Pages from doing an automatic install before the deliberate, lockfile-respecting `npm ci` build command. |
+
+7. Select **Save and Deploy**. Cloudflare reads the repository, runs the build, and publishes the contents of `dist/` to a temporary `*.pages.dev` URL.
+8. Open the deployment log. Do not proceed until `npm run check` and `npm run build` both pass there.
+9. In the Pages project, open **Custom domains -> Set up a custom domain**. Add `nobrakes86.com`, then add `www.nobrakes86.com` if you want it. Because the domain is registered and DNS-hosted at Cloudflare, accept the record change offered by the dashboard.
+10. Choose one canonical hostname (recommend `https://nobrakes86.com`) and configure the other to redirect to it. Verify HTTPS before enabling HSTS.
+11. In **Settings -> Builds**, leave `main` as the production branch. Pull requests may receive isolated Pages preview deployments; they still run the production publish gate, so drafts remain absent.
+
+Cloudflare Pages will deploy every merge to `main` through its Git integration. GitHub Actions does not hold a Cloudflare token and does not deploy. This keeps one authoritative deployment path.
+
+## Required local runtime
+
+Use Node.js **22.12 or newer** locally as well as in Cloudflare Pages. The current Markdown lint and HTML sanitization toolchain uses this supported runtime to receive its security fixes. Check it with `node --version`; if it is lower, install the current Node 22 LTS release before relying on the authoring hook or local quality gate. After upgrading, run `npm install` once again.
+
+## Cloudflare Free security setup
+
+Perform these steps on the `nobrakes86.com` zone, not inside a Worker:
+
+1. Under **Security -> Bots**, enable **Bot Fight Mode** and block AI bots. Bot Fight Mode is available on the Free plan and challenges known simple bots. [Free bot controls](https://developers.cloudflare.com/bots/plans/free/)
+2. Under **Security -> WAF -> Custom rules**, create a rule named `MVP: US-only`. Match `not ip.src.country in {"US"}` and choose **Block**. Cloudflare documents this country-allowlist pattern for custom rules. [Country allowlist example](https://developers.cloudflare.com/waf/custom-rules/use-cases/allow-traffic-from-specific-countries/)
+3. Under **Security -> WAF -> Rate limiting rules**, use the one Free-plan rule to protect availability. Start with all paths, 100 requests per 10 seconds per IP, and a Managed Challenge. Test normal browsing, then tune only if legitimate readers are challenged. The Free plan has one per-IP rule and a 10-second period. [Rate-limit availability](https://developers.cloudflare.com/waf/rate-limiting-rules/)
+4. Keep the site entirely static. Do not add a Pages Function merely to implement geo blocking or analytics; that would make every request consume a Worker quota.
+
+## GitHub quality gate
+
+The committed GitHub Action runs for pull requests to `main` and for pushes to `main`. It runs `npm ci`, content validation, `SizedMedia` validation, JS/TS/Markdown linting, type-checking, tests, coverage, and the production build.
+
+In GitHub, protect `main` with the `quality` status check, current-commit requirement, resolved conversations, blocked force pushes, blocked deletion, and no direct pushes. As the solo owner, do not require a separate approval you cannot grant yourself. GitHub's protected-branch documentation covers the required-check workflow. [Protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+
+Remove any old Cloudflare API, R2, Pages-project, or R2-access-key secrets/variables from GitHub once the Git-integrated Pages project is proven. They are not needed for this launch architecture.
+
+## Normal release flow
+
+1. Write `article.md` and add full-resolution originals under the entry's ignored `Media/` folder.
+2. Run `npm run dev` for the local second-monitor preview. Local preview includes drafts and never publishes.
+3. Run `npm run media:prepare`, inspect the low-resolution `SizedMedia/` output, and update the source if it is not good enough.
+4. Run `npm run check` and `npm run build`.
+5. Commit. The hook regenerates and stages derived media once more as a safety check.
+6. Push a branch, open a PR to `main`, and wait for the required `quality` check.
+7. Merge to `main`. Cloudflare Pages builds and deploys the exact commit from Git.
+8. Check the Pages deployment URL, custom domain, and Security Events after the first deployment.
+
+## Recovery and change control
+
+- A broken Pages deployment leaves the previous production deployment available for rollback in the Pages dashboard.
+- Keep original media backed up outside the repository. Git contains only portable public derivatives.
+- Revisit this architecture before adding longer/higher-resolution video, runtime image resizing, a contact form, comments, server-side search, analytics collection, or worldwide access. Each changes cost, privacy, or attack-surface assumptions.
+- Do not upgrade a plan or turn on a metered service as an emergency reaction. First identify why static Pages Free is insufficient, state the fixed ceiling you accept, and update the requirements and this guide.

@@ -1,11 +1,14 @@
 node_type: article
 id: 2026-thunderhill-east-cyclone
 parent: 86-challenge
-title: '2026 Rd 1: Thunderhill East Cyclone'
-subtitle: Oversteer City
+title: "2026 Rd 1: Thunderhill East Cyclone"
+subtitle: Oversteer, at last
 content_type: Event
 published: false
 published_at: null
-updated_at: null
-tags: [86-challenge, 2026, thunderhill]
+updated_at: 2026-08-02T05:51:35.748Z
+tags:
+  - 86-challenge
+  - 2026
+  - thunderhill
 media_label: RACE

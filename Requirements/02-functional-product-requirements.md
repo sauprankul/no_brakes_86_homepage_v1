@@ -26,9 +26,11 @@ Required initial top-level nodes:
 
 Every node has a colocated `config.yaml`. Published articles must validate `title`, `subtitle`, `parent`, `published`, `published_at`, `updated_at`, `tags`, `content_type`, `featured`, `thumbnail`, `thumbnail_alt`, and `summary`.
 
-`published_at` is written once, on the first transition to `published: true`, and must survive an unpublish, move or later edit. `updated_at` changes when the author saves an edited published Markdown file. The article byline shows “Updated” only if it is different from “Published”.
+`published_at` is written once, on the first transition to `published: true`, and must survive an unpublish, move or later edit. `updated_at` records the latest local edit. The article byline shows “Updated” only if its calendar date is different from “Published”.
 
-Optional fields: YouTube URL, Stream video UID, gallery items, official results URL, setup sheet, downloadable files, car configuration, circuit configuration, tire, weather, best lap, part numbers, affiliate disclosure and related articles.
+While `npm run dev` is active, every editable entry is visible regardless of `published`. The regular production build respects `published: true`. The local watcher batches edited entries and writes an ISO `updated_at` timestamp to each affected `config.yaml` once per minute; draft lists sort by that timestamp when they have no publish date.
+
+Optional fields: gallery items, official results URL, setup sheet, downloadable files, car configuration, circuit configuration, tire, weather, best lap, part numbers, affiliate disclosure and related articles. Public image/video files are generated from the entry-local `Media/` source directory into committed `SizedMedia/`; raw media is not deployed.
 
 Do not publish an article with a missing thumbnail alt text, empty title or unvalidated external URL.
 
@@ -58,6 +60,7 @@ Do not publish an article with a missing thumbnail alt text, empty title or unva
 - Filtering includes text match, an “Articles only?” choice (`Any`, `Yes`, or `No`), multiple include tags, multiple exclude tags, publication date, and ordering. The public interface must use “entries” or “articles”, never the technical word “node”.
 - Include/exclude tags are typeahead text fields: show up to five matching suggestions and represent selected tags as removable chips.
 - Display active filters and result count only after a filter is active. A clear-all action is required when filters are active.
+- The direct-child/default and active-filter/recursive candidate rules are covered with 100% line, function, and branch coverage against synthetic fixtures, never against author content.
 
 ### Phase 2: full-text without an API
 
@@ -68,9 +71,11 @@ Index author article content only: mark the article body with `data-pagefind-bod
 ## Article experience
 
 - Convert each `article.md` directly to sanitized HTML at build time. Do not insert hardcoded gallery, author-note, download, or section placeholder blocks into authored articles.
+- Render an article page’s H1 title and optional subtitle from its `config.yaml`; authors do not need to repeat either in `article.md`.
 - Generate the “On this page” box from the article’s level-two and level-three Markdown headings. Hide it if none exist.
 - A Markdown link to `./Downloads/<file>` renders as an accessible download button and is copied to the built site. The article folder’s `Downloads/` directory contains only intentionally public attachments.
-- Support YouTube video embeds with a privacy-enhanced domain (`youtube-nocookie.com`) and a click-to-load thumbnail, not an eager iframe.
+- `Downloads/` and `Media/` are intentionally Git-ignored author workspaces. `SizedMedia/` is generated, validated, and committed. Each entry’s preview/banner thumbnail is generated from `Media/thumbnail.<extension>` as `SizedMedia/thumbnail.jpg`.
+- Support static, directly served native video from `SizedMedia/`: H.264/AAC MP4, smaller dimension at most 480px, at most 30fps, at most 30 seconds, controls enabled, and no automatic high-resolution variant. YouTube embeds remain supported only when the author intentionally chooses an external video.
 - Support responsive author photos, captions, lightbox controls, part-number callouts, warnings, callouts, tables, figures, source links and downloadable data.
 - Data downloads must include file type, size, created date, checksum when meaningful and an accessibility-friendly label.
 - Event pages have links to official results; track guides state the exact layout/configuration; data comparisons declare their variables.

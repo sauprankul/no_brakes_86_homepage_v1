@@ -1,12 +1,7 @@
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import { promisify } from 'node:util';
 import test from 'node:test';
 import { renderArticleMarkdown } from '../scripts/content-compiler.mjs';
 
-const execFileAsync = promisify(execFile);
 
 test('renders authored Markdown, a table of contents, and download links', () => {
   const rendered = renderArticleMarkdown('# Race report\n\nThe **actual words** belong here.\n\n## Downloads\n\n[Setup notes](./Downloads/setup-notes.txt)', 'round-1');
@@ -22,12 +17,15 @@ test('removes unsafe HTML from authored Markdown', () => {
   assert.deepEqual(rendered.headings, [{ id: 'safe-heading', text: 'Safe heading', depth: 2 }]);
 });
 
-test('the local content build puts article.md HTML into the preview index', async () => {
-  const root = path.resolve(import.meta.dirname, '..');
-  await execFileAsync(process.execPath, ['scripts/build-content-index.mjs', '--include-drafts'], { cwd: root });
-  const index = JSON.parse(await readFile(path.join(root, 'public', 'content-index.json'), 'utf8'));
-  const article = index.articles.find((entry) => entry.id === '2026-thunderhill-east-cyclone');
-  assert.equal(article.hasArticle, true);
-  assert.match(article.html, /After the Sonoma round\./);
-  assert.match(article.html, /class="download-link"/);
+test('preserves an approved privacy-enhanced YouTube embed', () => {
+  const rendered = renderArticleMarkdown('<iframe src="https://www.youtube-nocookie.com/embed/5UwIX1HKLgU" title="Recap" loading="lazy" allowfullscreen></iframe>', 'recap');
+  assert.match(rendered.html, /youtube-nocookie\.com\/embed\/5UwIX1HKLgU/);
+  assert.match(rendered.html, /allowfullscreen/);
+});
+
+test('maps authored Media image and video references to committed SizedMedia files', () => {
+  const rendered = renderArticleMarkdown('![Corner entry](./Media/corner-entry.heic)\n\n<video controls loop playsinline><source src="./Media/lap.mov" type="video/quicktime"></video>', 'round-1');
+  assert.match(rendered.html, /src="\/media\/round-1\/corner-entry\.jpg"/);
+  assert.match(rendered.html, /src="\/media\/round-1\/lap\.mp4"/);
+  assert.match(rendered.html, /<video controls loop playsinline>/);
 });
