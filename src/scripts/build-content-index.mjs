@@ -5,7 +5,7 @@ import { renderArticleMarkdown } from './content-compiler.mjs';
 import { directCategoryChildren, rootCategoryId } from './content-hierarchy.mjs';
 import { contentPath } from './content-routes.mjs';
 import { visibleCategories, visibleEntries } from './content-index-visibility.mjs';
-import { IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
+import { generateSizedMedia, IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
 import { contentRoot, publicRoot } from './project-paths.mjs';
 
 const outputFile = path.join(publicRoot, 'content-index.json');
@@ -117,6 +117,13 @@ function slugFrom(file) {
 }
 
 async function build() {
+  if (isWatchMode && includeDrafts) {
+    try {
+      await generateSizedMedia(contentRoot);
+    } catch (error) {
+      console.error(`Media resizing failed: ${error.message}`);
+    }
+  }
   await rm(path.join(publicRoot, 'media'), { recursive: true, force: true });
   const configs = (await filesIn(contentRoot)).filter((file) => path.basename(file) === 'config.yaml');
   const entries = await Promise.all(configs.map(async (file) => ({ file, config: await normaliseArticle(file, await readYaml(file)) })));

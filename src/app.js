@@ -3,6 +3,7 @@ import { articleHeaderMarkup } from './scripts/article-view.mjs';
 import { installClientLogBridge } from './scripts/client-log-bridge.mjs';
 import { selectContentIndex } from './scripts/content-index-client.mjs';
 import { entryRoutePath, normalizeRoutePath, resolveContentRoute } from './scripts/content-routes.mjs';
+import { devPublicationControlMarkup } from './scripts/dev-publish-view.mjs';
 import { hierarchyPath, navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
 import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar } from './scripts/navigation-policy.mjs';
 import { previewPublicationBadge, previewPublicationDate } from './scripts/preview-status.mjs';
@@ -322,7 +323,8 @@ function renderListPage(id) {
   const immediateChildren = directChildren(id);
   const categoryName = category.name || category.title;
   setBreadcrumb(breadcrumbParts(id));
-  main.innerHTML = `<header class="page-header"><h1>${esc(categoryName)}</h1><p>${esc(category.intro || category.subtitle || 'Preview the entries in this part of the archive.')}</p></header><section aria-label="${esc(categoryName)} entries">${immediateChildren.length ? collectionMarkup(id, false) : ''}<div class="category-results" id="category-results"></div></section>`;
+  const devPublishControl = devPublicationControlMarkup(category, import.meta.env.DEV);
+  main.innerHTML = `<header class="page-header"><h1>${esc(categoryName)}</h1><p>${esc(category.intro || category.subtitle || 'Preview the entries in this part of the archive.')}</p></header>${devPublishControl}<section aria-label="${esc(categoryName)} entries">${immediateChildren.length ? collectionMarkup(id, false) : ''}<div class="category-results" id="category-results"></div></section>`;
   if (immediateChildren.length) mountCollection(id, false);
   else document.querySelector('#category-results').innerHTML = '<div class="empty-state"><strong>No child entries yet.</strong>This page will stay clean until it has something to preview.</div>';
   renderTree();
@@ -342,7 +344,7 @@ function renderArticle(id) {
   const toc = article.headings?.length ? `<aside class="article-aside"><h2>On this page</h2><ul>${article.headings.map((heading) => `<li class="article-aside__level-${heading.depth}"><a href="#${esc(heading.id)}">${esc(heading.text)}</a></li>`).join('')}</ul></aside>` : '';
   setBreadcrumb(breadcrumbParts(article.id));
   const details = `${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}`;
-  const devPublishControl = import.meta.env.DEV ? `<div class="dev-publish" data-dev-publish-control><span>Local preview</span><button type="button" data-dev-publish="${article.id}">${article.published ? 'Unpublish locally' : 'Publish locally'}</button></div>` : '';
+  const devPublishControl = devPublicationControlMarkup(article, import.meta.env.DEV);
   main.innerHTML = `
     ${articleHeaderMarkup(article, details)}
     ${devPublishControl}

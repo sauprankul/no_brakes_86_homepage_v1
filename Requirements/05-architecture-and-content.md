@@ -50,15 +50,15 @@ The media generator accepts only `.jpg`, `.jpeg`, `.png`, `.heic`, `.heif`, `.mo
 
 The generator must reject unsupported input, name collisions after conversion, unconvertible media, video longer than 30 seconds, image/video dimensions above the generated limits, frame rate above 30fps, or any output above Cloudflare Pages' 25 MiB file limit. It must never silently truncate, discard, or publish a source file.
 
-The repository Git pre-commit hook runs the generator and stages only generated `SizedMedia/` files. CI validates committed `SizedMedia/` without needing the ignored source originals. `npm run media:prepare` performs generation; `npm run media:validate` validates generated output.
+During `npm run dev`, the content watcher runs the generator before rebuilding the rendered index so new or changed originals become available in the live authoring preview. The repository Git pre-commit hook also runs the generator and stages only missing or changed generated `SizedMedia/` files. CI validates committed `SizedMedia/` without needing the ignored source originals. `npm run media:prepare` performs generation; `npm run media:validate` validates generated output.
 
-Markdown may reference an original using `./Media/<file>`. The Markdown compiler must render the matching deployed `/media/<entry-id>/<generated-file>` URL. Generated HTML must never reference a local `Media/` path. A `Media/thumbnail.*` source generates `SizedMedia/thumbnail.jpg`, which is the default preview and banner image for that entry.
+Markdown may reference an original using `./Media/<file>`. The Markdown compiler must render the matching deployed `/media/<entry-id>/<generated-file>` URL. Generated HTML must never reference a local `Media/` path. A `Media/thumbnail.*` source generates `SizedMedia/thumbnail.jpg`, which is used as that entry’s optional preview and banner image.
 
 Short clips use native `<video>` playback with visible pause/scrub controls, `playsinline`, `preload="metadata"`, and an accessible text alternative. Autoplay, mute, and loop are opt-in per clip. There is one static rendition for MVP; adaptive delivery is explicitly deferred until its quality benefit warrants a revised cost model.
 
 ## Content validation
 
-Published entries must validate title, subtitle, parent, publication state, immutable `published_at`, `updated_at`, tags, thumbnail, thumbnail alt text, and child links from an article to each direct child. A published thumbnail must resolve to generated public media or an intentionally approved external asset.
+Published entries must validate title, subtitle, parent when present, publication state, immutable `published_at`, `updated_at`, tags, and child links from an article to each direct child. A thumbnail is optional; when configured, it must resolve to generated public media or an intentionally approved external asset and include appropriate alt text.
 
 The pull-request quality gate validates published content and generated media, lints the application and published Markdown, type-checks, and produces a production build.
 

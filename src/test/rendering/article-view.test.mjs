@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import test from 'node:test';
 import { articleHeaderMarkup } from '../../scripts/article-view.mjs';
 
@@ -12,4 +14,10 @@ test('renders title and subtitle from config data, not article Markdown', () => 
 test('omits an empty config subtitle', () => {
   const html = articleHeaderMarkup({ title: 'Only title', subtitle: '', type: 'Article' }, '');
   assert.doesNotMatch(html, /article-header__subtitle/);
+});
+
+test('the article body has the only divider below the subtitle and local publish control', async () => {
+  const stylesheet = await readFile(path.join(process.cwd(), 'styles.css'), 'utf8');
+  assert.match(stylesheet, /\.dev-publish \{[^}]*border: 0;/);
+  assert.match(stylesheet, /\.article-layout \{[^}]*border-top: 1px solid var\(--line\)/);
 });

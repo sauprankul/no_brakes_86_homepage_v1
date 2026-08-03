@@ -13,6 +13,7 @@ test('drilled navigation keeps each path entry as a separate full-size row with 
   assert.match(app, /data-tree-context="\$\{category\.id\}" data-tree-root="\$\{category\.id\}" href="\$\{esc\(entryHref\(category\)\)\}"/);
   assert.match(stylesheet, /\.tree__category, \.tree__context \{ font-size: \.83rem; font-weight: 700; \}/);
   assert.match(stylesheet, /\.tree__label \{ min-width: 0; overflow-wrap: anywhere; white-space: normal;/);
+  assert.match(stylesheet, /\.tree__folder \{ display: none; \}/);
 });
 
 test('the whole sidebar is hideable whenever the viewport is narrower than 16:9', () => {

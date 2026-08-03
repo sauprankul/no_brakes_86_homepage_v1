@@ -26,17 +26,17 @@ Required initial top-level nodes:
 
 ## Required article fields
 
-Every node has a colocated `config.yaml`. Published articles must validate `title`, `subtitle`, `parent`, `published`, `published_at`, `updated_at`, `tags`, `content_type`, `featured`, `thumbnail`, `thumbnail_alt`, and `summary`.
+Every node has a colocated `config.yaml`. Published entries must validate `title`, `subtitle`, `parent` when present, `published`, `published_at`, `updated_at`, `tags`, `content_type`, `featured`, and `summary`. Thumbnail metadata is optional; when configured, it must resolve to an allowed public asset.
 
 `published_at` is written once, on the first transition to `published: true`, and must survive an unpublish, move or later edit. `updated_at` records the latest local edit. The article byline shows “Updated” only if its calendar date is different from “Published”.
 
-While `npm run dev` is active, every editable entry is visible regardless of `published`. Article pages in that local Vite preview show a local-only Publish/Unpublish control that writes only the matching entry’s `config.yaml`, preserves an existing `published_at`, and updates `updated_at`. It must not exist in a production build. The regular production build includes only `published: true` entries; an empty published index is a valid public state and must never fall back to fixture, sample, or draft data. The local watcher batches edited entries and writes an ISO `updated_at` timestamp to each affected `config.yaml` once per minute; draft lists sort by that timestamp when they have no publish date.
+While `npm run dev` is active, every editable entry is visible regardless of `published`. Every entry page, whether it renders an article or a child preview list, shows a local-only Publish/Unpublish control that writes only the matching entry’s `config.yaml`, preserves an existing `published_at`, and updates `updated_at`. It must not exist in a production build. The regular production build includes only `published: true` entries; an empty published index is a valid public state and must never fall back to fixture, sample, or draft data. The local watcher batches edited entries and writes an ISO `updated_at` timestamp to each affected `config.yaml` once per minute; draft lists sort by that timestamp when they have no publish date.
 
 Every unpublished entry, including a top-level entry, has an unmistakable red draft highlight in local development navigation. Production navigation never applies this draft treatment.
 
 Optional fields: gallery items, official results URL, setup sheet, downloadable files, car configuration, circuit configuration, tire, weather, best lap, part numbers, affiliate disclosure and related articles. Public image/video files are generated from the entry-local `Media/` source directory into committed `SizedMedia/`; raw media is not deployed.
 
-Do not publish an article with a missing thumbnail alt text, empty title or unvalidated external URL.
+Do not publish an article with an empty title or unvalidated external URL. If it has a thumbnail, validate its alt text and public asset.
 
 ## Navigation
 
@@ -51,7 +51,7 @@ Do not publish an article with a missing thumbnail alt text, empty title or unva
 
 - `New`: default sort is `publishedAt` descending. Configuration controls number of items and whether an update changes a node’s position.
 - `Hot`: a manually editorialized list using `featuredRank`, not page views alone. This makes the best entry points intentional and prevents popularity feedback loops.
-- Both feeds must use the standard article preview component and thumbnails.
+- Both feeds must use the standard article preview component; thumbnails are optional.
 
 ## Search and filtering
 
@@ -81,7 +81,7 @@ Index author article content only: mark the article body with `data-pagefind-bod
 - Render an article page’s H1 title and optional subtitle from its `config.yaml`; authors do not need to repeat either in `article.md`.
 - Generate the “On this page” box from the article’s level-two and level-three Markdown headings. Hide it if none exist.
 - A Markdown link to `./Downloads/<file>` renders as an accessible download button and is copied to the built site. The article folder’s `Downloads/` directory contains only intentionally public attachments.
-- `Downloads/` and `Media/` are intentionally Git-ignored author workspaces. `SizedMedia/` is generated, validated, and committed. Each entry’s preview/banner thumbnail is generated from `Media/thumbnail.<extension>` as `SizedMedia/thumbnail.jpg`.
+- `Downloads/` and `Media/` are intentionally Git-ignored author workspaces. `SizedMedia/` is generated, validated, and committed. When an author supplies `Media/thumbnail.<extension>`, it is generated as `SizedMedia/thumbnail.jpg` for optional preview/banner use.
 - Support static, directly served native video from `SizedMedia/`: H.264/AAC MP4, smaller dimension at most 480px, at most 30fps, at most 30 seconds, controls enabled, and no automatic high-resolution variant. YouTube embeds remain supported only when the author intentionally chooses an external video.
 - Support responsive author photos, captions, lightbox controls, part-number callouts, warnings, callouts, tables, figures, source links and downloadable data.
 - Data downloads must include file type, size, created date, checksum when meaningful and an accessibility-friendly label.

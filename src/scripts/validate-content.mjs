@@ -1,6 +1,7 @@
 import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
+import { configuredThumbnailError } from './content-validation-rules.mjs';
 import { IMAGE_EXTENSIONS, mediaTypeFor, sizedMediaRelativePath } from './media-pipeline.mjs';
 import { contentRoot, repositoryRelative } from './project-paths.mjs';
 
@@ -58,9 +59,9 @@ for (const node of nodes) {
   if (config.published !== true) continue;
   const thumbnail = await thumbnailFor(dir, config.thumbnail);
 
-  if (!config.parent) errors.push(`${label}: root nodes are structural and must not be published.`);
   if (!isNonEmptyString(config.subtitle)) errors.push(`${label}: published nodes need a non-empty subtitle.`);
-  if (!isNonEmptyString(thumbnail)) errors.push(`${label}: published nodes need a generated SizedMedia thumbnail. Run npm run media:prepare locally.`);
+  const thumbnailError = configuredThumbnailError(config.thumbnail, thumbnail);
+  if (thumbnailError) errors.push(`${label}: ${thumbnailError}`);
   if (!isDate(config.published_at)) errors.push(`${label}: published_at must be YYYY-MM-DD for a published node.`);
   if (!isTimestamp(config.updated_at)) errors.push(`${label}: updated_at must be an ISO date or timestamp for a published node.`);
   if (isDate(config.published_at) && isTimestamp(config.updated_at) && config.updated_at.slice(0, 10) < config.published_at) errors.push(`${label}: updated_at cannot be before published_at.`);
