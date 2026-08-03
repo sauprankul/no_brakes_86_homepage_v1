@@ -6,6 +6,10 @@ function parentId(entry) {
   return entry.parent ?? entry.category ?? null;
 }
 
+export function navigationEntryClasses(entry, { active = false, previewMode = false } = {}) {
+  return ['tree__article', active && 'is-active', previewMode && entry.published !== true && 'is-unpublished'].filter(Boolean).join(' ');
+}
+
 export function rootIdForEntry(entries, id) {
   const seen = new Set();
   let current = entryById(entries, id);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parentFocus, rootIdForEntry, sidebarContext } from '../scripts/sidebar-navigation.mjs';
+import { navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from '../scripts/sidebar-navigation.mjs';
 
 const categories = [{ id: 'race', short: '86 Challenge' }, { id: 'blog', short: 'Blog' }];
 const entries = [
@@ -18,4 +18,10 @@ test('sidebar navigation supports arbitrary depth by drilling into one branch at
   assert.deepEqual(context.children.map((entry) => entry.id), ['round-1', 'round-2']);
   assert.equal(parentFocus(entries, 'race', '2026'), null);
   assert.equal(parentFocus(entries, 'race', 'round-1'), '2026');
+});
+
+test('dev navigation visibly marks drafts without changing production navigation', () => {
+  assert.match(navigationEntryClasses({ published: false }, { previewMode: true }), /is-unpublished/);
+  assert.doesNotMatch(navigationEntryClasses({ published: true }, { previewMode: true }), /is-unpublished/);
+  assert.doesNotMatch(navigationEntryClasses({ published: false }, { previewMode: false }), /is-unpublished/);
 });

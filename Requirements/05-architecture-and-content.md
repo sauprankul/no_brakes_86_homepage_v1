@@ -20,7 +20,7 @@ Everything is an entry in the archive. Every entry directory contains exactly on
 - `article.md`: render authored Markdown as article content;
 - both article and child folders: render the article first and show the child-search controls beneath it.
 
-`npm run dev` is the local VS Code authoring loop. It includes drafts, rebuilds the content index, refreshes the browser, and updates edited entry timestamps once per minute. Its local-only Vite middleware may toggle the current article’s `published` value and persist the required timestamps; it is bound to local development and is absent from the static build. The production build includes only `published: true` entries. If zero entries are published, the generated index and rendered public UI are empty rather than substituting prototype data.
+`npm run dev` is the local VS Code authoring loop. It includes every child entry regardless of publication state, gives unpublished child entries a red navigation highlight, rebuilds the content index, refreshes the browser, and updates edited entry timestamps once per minute. Its local-only Vite middleware may toggle the current article’s `published` value and persist the required timestamps; it is bound to local development and is absent from the static build. The production build includes only `published: true` entries. If zero entries are published, the generated index and rendered public UI are empty rather than substituting prototype data.
 
 ## Media contract
 

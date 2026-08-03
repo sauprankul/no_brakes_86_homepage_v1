@@ -30,6 +30,8 @@ Every node has a colocated `config.yaml`. Published articles must validate `titl
 
 While `npm run dev` is active, every editable entry is visible regardless of `published`. Article pages in that local Vite preview show a local-only Publish/Unpublish control that writes only the matching entry’s `config.yaml`, preserves an existing `published_at`, and updates `updated_at`. It must not exist in a production build. The regular production build includes only `published: true` entries; an empty published index is a valid public state and must never fall back to fixture, sample, or draft data. The local watcher batches edited entries and writes an ISO `updated_at` timestamp to each affected `config.yaml` once per minute; draft lists sort by that timestamp when they have no publish date.
 
+Every unpublished child entry in the local development navigation has an unmistakable red draft highlight. Production navigation never applies this draft treatment. Synthetic tests must prove both that dev includes published and unpublished child entries and that the draft navigation class is dev-only.
+
 Optional fields: gallery items, official results URL, setup sheet, downloadable files, car configuration, circuit configuration, tire, weather, best lap, part numbers, affiliate disclosure and related articles. Public image/video files are generated from the entry-local `Media/` source directory into committed `SizedMedia/`; raw media is not deployed.
 
 Do not publish an article with a missing thumbnail alt text, empty title or unvalidated external URL.

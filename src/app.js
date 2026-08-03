@@ -1,7 +1,7 @@
 import { filterCollection, filtersAreActive } from './scripts/collection-filter.mjs';
 import { articleHeaderMarkup } from './scripts/article-view.mjs';
 import { selectContentIndex } from './scripts/content-index-client.mjs';
-import { parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
+import { navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
 
 /*
   Prototype content deliberately contains navigation metadata and the requester's
@@ -178,7 +178,7 @@ function renderTree() {
     const items = context?.children.map((entry) => {
       const hasChildren = directChildren(entry.id).length > 0;
       const active = state.article === entry.id || state.category === entry.id;
-      return `<div class="tree__entry"><a class="tree__article ${active ? 'is-active' : ''}" href="${entryHref(entry)}" ${active ? 'aria-current="page"' : ''}>${esc(entry.title)}</a>${hasChildren ? `<button class="tree__drill" type="button" data-tree-drill="${entry.id}" aria-label="Show entries within ${esc(entry.title)}"><span aria-hidden="true">›</span></button>` : ''}</div>`;
+      return `<div class="tree__entry"><a class="${navigationEntryClasses(entry, { active, previewMode: import.meta.env.DEV })}" href="${entryHref(entry)}" ${active ? 'aria-current="page"' : ''}>${esc(entry.title)}</a>${hasChildren ? `<button class="tree__drill" type="button" data-tree-drill="${entry.id}" aria-label="Show entries within ${esc(entry.title)}"><span aria-hidden="true">›</span></button>` : ''}</div>`;
     }).join('') ?? '';
     const back = context?.focus ? `<button class="tree__back" type="button" data-tree-back="${category.id}" aria-label="Go up one level in ${esc(category.short)}">‹</button>` : '';
     return `

@@ -2,7 +2,7 @@ import { access, copyFile, mkdir, readFile, readdir, rm, watch, writeFile } from
 import path from 'node:path';
 import YAML from 'yaml';
 import { renderArticleMarkdown } from './content-compiler.mjs';
-import { visibleCategories } from './content-index-visibility.mjs';
+import { visibleCategories, visibleEntries } from './content-index-visibility.mjs';
 import { IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
 import { contentRoot, publicRoot } from './project-paths.mjs';
 
@@ -135,8 +135,7 @@ async function build() {
       children: [],
     }));
   const categoryMap = new Map(categories.map((category) => [category.id, category]));
-  const articles = nodes
-    .filter(({ config, parent }) => parent && (includeDrafts || config.published === true))
+  const articles = visibleEntries(nodes, includeDrafts)
     .map(({ config, id, parent, thumbnail, hasArticle, html, headings }) => ({
       id,
       category: config.parent,
