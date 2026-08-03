@@ -21,9 +21,11 @@ test('collector only permits the configured public origin when an Origin is supp
   assert.equal(originAllowed(request(), 'https://no-brakes.example'), false);
 });
 
-test('collector defaults to no analytics persistence for EEA, UK, and Swiss requests', () => {
-  assert.equal(analyticsCollectionAllowed({ cf: { country: 'FR' } }), false);
+test('collector defaults to no analytics persistence outside the US-only MVP scope', () => {
+  assert.equal(analyticsCollectionAllowed({ cf: { country: 'CA' } }), false);
+  assert.equal(analyticsCollectionAllowed({ cf: { country: 'MX' } }), false);
   assert.equal(analyticsCollectionAllowed({ cf: { country: 'GB' } }), false);
-  assert.equal(analyticsCollectionAllowed({ cf: { country: 'CH' } }), false);
+  assert.equal(analyticsCollectionAllowed({ cf: { country: 'FR' } }), false);
   assert.equal(analyticsCollectionAllowed({ cf: { country: 'US' } }), true);
+  assert.equal(analyticsCollectionAllowed({}), false);
 });

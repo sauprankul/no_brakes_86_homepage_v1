@@ -2,15 +2,40 @@
 
 This is a product requirement checklist, not legal advice. Get counsel for jurisdiction-specific privacy, copyright, sponsorship, competition and motorsport liability questions before public launch.
 
-## Privacy and data retention
+## Regional launch scope, privacy and retention
+
+This is a temporary **US-only MVP**. The production edge must block every request whose country is not `US`, including unknown country values. Use a zone-wide Cloudflare WAF custom rule with expression `(ip.src.country ne "US")` and action **Block**; Pages middleware is a second, fail-closed layer and returns HTTP 451. The analytics collector independently accepts only `US`. Do not remove either layer until the applicable regional launch checklist below has been approved and tested against the custom domain and the `pages.dev` URL. Country is an imperfect network-location signal, not proof of residence or a substitute for legal analysis.
 
 - Default posture: do not collect personal data. A static site requires no accounts, user profiles, marketing pixels or behavioral advertising. Analytics is disabled until a named owner approves a release record.
 - Do not promise or represent the site as “globally compliant” or analytics as “anonymous.” A browser request and a search term can be personal data even when no identifier is intentionally persisted. The approved implementation is first-party, cookieless, single-site aggregate measurement only; it must never collect or persist a MAC address, request IP address, cookie, fingerprint, stable visitor identifier, or cross-site activity.
 - Before enabling analytics, create and retain a release record: jurisdictions and audience in scope; controller contact; exact event fields; purpose; Cloudflare’s processor/sub-processor and data-location terms; retention; legal basis; any required notice, objection or consent path; and the decision-maker/date. Re-evaluate it after any new event field, provider, retention change, advertising integration, or cross-site feature. This is an engineering gate, not legal advice.
-- EU/UK/Swiss safeguard: keep the collector’s default geographic block in place. Only collect there after the release record demonstrates a valid route under the relevant ePrivacy/GDPR and national rules. The CNIL’s consent-exempt audience-measurement route is narrow—single-editor, audience/performance purpose only, anonymous statistics, no cross-site tracking or third-party reuse—and it still recommends informing users. If the design does not clearly qualify, obtain the required consent and offer refusal before collection rather than trying to hide the tracking. [CNIL audience-measurement guidance](https://www.cnil.fr/fr/cookies-solutions-pour-les-outils-de-mesure-daudience) and [GDPR transparency/minimisation rules](https://eur-lex.europa.eu/eli/reg/2016/679/oj) are the baseline references.
-- A banner, public analytics opt-out, or privacy notice is not a default product feature merely because the code exists. Add the notice and any choice/objection mechanism before enabling collection wherever the release record says the law requires it. Do not make access to ordinary articles conditional on accepting analytics. The owner-only local exclusion is not a substitute for a legally required visitor right.
 - Retain Analytics Engine aggregate rows for no more than its three-month window; do not export raw event rows to another store. Keep operational request logs for at most 30 days and security-investigation material for at most 90 days unless a documented legal need requires more. Restrict analytics/dashboard access to the owner, review retention quarterly, and delete any optional export on schedule.
 - Maintain a simple rights and incident path: a public contact address when a notice is required; a documented process to assess access/erasure/objection requests despite the non-identifying design; and a breach runbook that evaluates notification duties before notifying anyone.
+
+### United States — allowed for the MVP
+
+- No analytics consent banner, public analytics opt-out, or public analytics settings UI is required by this product baseline. Do not sell, share, target advertising with, or profile analytics data; never condition ordinary articles on analytics. The owner-only local exclusion is not a substitute for any legally required right.
+- Before launch and annually thereafter, document whether the operator meets the then-current thresholds of California and other applicable US state privacy laws. If a law applies or the telemetry becomes personal information under that law, add the required notice at collection, privacy-policy disclosures, verified rights-request method, retention disclosure, and any mandated opt-out/GPC handling before collecting. California-covered businesses must provide notices and honor rights including access/deletion/correction and opt-out of sale or sharing; the current personal-site design is expressly not allowed to sell or share data. [California Attorney General CCPA guidance](https://oag.ca.gov/privacy/ccpa)
+- Apply data minimisation, purpose limitation, least-privilege dashboard access and the retention limits above even where a state statute does not apply. Do not knowingly collect from children or build a child-directed experience without a separate COPPA review.
+
+### Canada — deferred and blocked
+
+- Canadian (`CA`) requests are blocked and no site or analytics data is intentionally persisted for this rollout. Do not claim that blocking alone resolves every Canadian obligation; reassess CDN/provider processing before launch.
+- Before a Canadian release, map federal PIPEDA and applicable provincial law (including Québec), publish an accessible privacy notice, define a contact/rights route, and obtain meaningful consent for non-essential personal-data analytics. Provide a real withdrawal/objection path where required; do not bundle analytics into access to the articles. PIPEDA generally requires meaningful consent, a clear explanation of collection/purpose/sharing, and a choice for non-integral collection. [Office of the Privacy Commissioner of Canada](https://www.priv.gc.ca/en/privacy-topics/privacy-laws-in-canada/the-personal-information-protection-and-electronic-documents-act-pipeda/p_principle/principles/p_consent/)
+
+### Mexico — deferred and blocked
+
+- Mexican (`MX`) requests are blocked and no site or analytics data is intentionally persisted for this rollout.
+- Before a Mexican release, obtain Mexico-specific advice on the current Federal Law on Protection of Personal Data Held by Private Parties, publish the required Spanish privacy notice identifying controller, purposes, transfers and retention, and provide a process for ARCO rights (access, rectification, cancellation and opposition) and any required consent/objection choice. [Current federal law text](https://www.diputados.gob.mx/LeyesBiblio/ref/lfpdppp.htm)
+
+### European Union and United Kingdom — deferred and blocked
+
+- EU/EEA and UK requests are blocked and no site or analytics data is intentionally persisted for this rollout.
+- Before enabling either region, complete a jurisdiction-specific ePrivacy/GDPR or PECR/UK GDPR review. Default to prior consent for non-essential tracking or terminal storage/access, show a clear notice and an equally easy refusal/withdrawal route, and do not load analytics before consent. The narrow CNIL audience-measurement exemption is not a blanket approval: it is limited to single-editor audience/performance measurement producing anonymous statistics, with no cross-site tracking or third-party reuse, and CNIL still recommends informing users. [CNIL audience-measurement guidance](https://www.cnil.fr/fr/cookies-solutions-pour-les-outils-de-mesure-daudience) and [GDPR transparency/minimisation rules](https://eur-lex.europa.eu/eli/reg/2016/679/oj) are the baseline references.
+
+### All other countries — deferred and blocked
+
+- Treat every non-US country not named above as deferred: access is blocked, analytics collection is blocked, and no market-specific claim is made. A future regional release requires the same written release record and counsel review before loosening the US-only WAF/middleware rule.
 - Do not put personal contact details, exact private addresses, keys, credentials, license plates, event attendee information or unpublished telemetry in public source files, images or downloadable data.
 - Add a concise privacy notice before production launch; publish a contact path for privacy requests.
 
