@@ -6,7 +6,7 @@ The site is premium where readers notice it—fast static pages, responsive layo
 
 ## The decision and its boundaries
 
-- **Cloudflare Pages Free** hosts `dist/` directly from GitHub. Static-asset requests are free and unlimited. [Pages pricing](https://developers.cloudflare.com/pages/functions/pricing/)
+- **Cloudflare Pages Free** builds from the repository's `src/` application root and hosts `src/dist/` directly from GitHub. Static-asset requests are free and unlimited. [Pages pricing](https://developers.cloudflare.com/pages/functions/pricing/)
 - **Cloudflare Free zone** for `nobrakes86.com` provides DNS, TLS, CDN, DDoS protection, Bot Fight Mode, one rate-limit rule, and WAF custom rules. Cloudflare provides unmetered DDoS protection on every plan. [DDoS protection](https://developers.cloudflare.com/ddos-protection/about/)
 - `Media/` contains full-resolution local originals and is Git-ignored. `SizedMedia/` contains generated, versioned public derivatives and is committed to Git.
 - Images are generated as JPEG with the smallest dimension no larger than 1080px. Videos are generated as H.264/AAC MP4 with the smallest dimension no larger than 480px, at no more than 30fps and no more than 30 seconds long.
@@ -32,6 +32,7 @@ Cloudflare's Pages Git integration documentation uses exactly this path. It conn
 Run the following once from the repository root:
 
 ```powershell
+cd src
 npm install
 ```
 
@@ -41,6 +42,8 @@ npm install
 git config --get core.hooksPath
 # Expected: .githooks
 ```
+
+Run every `npm run ...` command in this guide from `src/`. The authored `Content/` tree intentionally remains at repository root; the scripts resolve it from the application root.
 
 The committed repository layout for a media-bearing entry is:
 
@@ -114,7 +117,7 @@ Do not hand-edit `SizedMedia/` or its `.media-manifest.json`. Change the source 
    | --- | --- |
    | Build command | `npm ci && npm run check && npm run build` |
    | Build output directory | `dist` |
-   | Root directory | leave blank |
+   | Root directory | `src` |
 
 6. In the build environment-variable area, add these plain-text variables for both **Production** and **Preview**:
 
@@ -133,7 +136,7 @@ Cloudflare Pages will deploy every merge to `main` through its Git integration. 
 
 ## Required local runtime
 
-Use Node.js **22.12 or newer** locally as well as in Cloudflare Pages. The current Markdown lint and HTML sanitization toolchain uses this supported runtime to receive its security fixes. Check it with `node --version`; if it is lower, install the current Node 22 LTS release before relying on the authoring hook or local quality gate. After upgrading, run `npm install` once again.
+Use Node.js **22.12 or newer** locally as well as in Cloudflare Pages. The current Markdown lint and HTML sanitization toolchain uses this supported runtime to receive its security fixes. Check it with `node --version`; if it is lower, install the current Node 22 LTS release before relying on the authoring hook or local quality gate. After upgrading, run `npm install` from `src/` once again.
 
 ## Cloudflare Free security setup
 
@@ -155,7 +158,7 @@ Remove any old Cloudflare API, R2, Pages-project, or R2-access-key secrets/varia
 ## Normal release flow
 
 1. Write `article.md` and add full-resolution originals under the entry's ignored `Media/` folder.
-2. Run `npm run dev` for the local second-monitor preview. Local preview includes drafts and never publishes.
+2. Open a terminal in `src/` and run `npm run dev` for the local second-monitor preview. Local preview includes drafts and never publishes.
 3. Run `npm run media:prepare`, inspect the low-resolution `SizedMedia/` output, and update the source if it is not good enough.
 4. Run `npm run check` and `npm run build`.
 5. Commit. The hook regenerates and stages derived media once more as a safety check.

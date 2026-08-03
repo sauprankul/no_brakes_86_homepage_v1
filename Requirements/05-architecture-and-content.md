@@ -10,6 +10,8 @@ Cloudflare Pages and GitHub Actions must use Node.js 22.12 or newer. The Pages c
 
 The website remains portable: static HTML, CSS, JavaScript, Markdown, YAML, and generated public media must be sufficient to rebuild it elsewhere.
 
+The repository root must remain author-focused. `Content/`, `Documentation/`, `Requirements/`, `README.md`, `LICENSE`, `agent.md`, hidden repository configuration, and one `src/` application directory are the only intended root entries. Application HTML/CSS/JS, package manifests, build configuration, public assets, scripts, tests, fixtures, dependency installs, coverage output, and build output live under `src/`. Cloudflare Pages uses `src` as its Root directory and `dist` as its Build output directory. Static host files such as `_headers`, `robots.txt`, `sitemap.xml`, and the web manifest live in `src/public/`; they do not belong at repository root.
+
 ## Node authoring model
 
 Everything is an entry in the archive. Every entry directory contains exactly one `config.yaml`; no `_node.yaml`, category-specific metadata file, or separate metadata convention is allowed. `article.md` is optional:
@@ -54,7 +56,7 @@ Short clips use native `<video>` playback with visible pause/scrub controls, `pl
 
 Published entries must validate title, subtitle, parent, publication state, immutable `published_at`, `updated_at`, tags, thumbnail, thumbnail alt text, and child links from an article to each direct child. A published thumbnail must resolve to generated public media or an intentionally approved external asset.
 
-The required quality gate runs content validation, generated-media validation, JS/TS linting, published-article Markdown linting, type-checking, unit tests, full collection-filter coverage, and a production build. Synthetic fixtures belong in `test/testdata/`; feature tests must not depend on production content. The media suite must cover source-to-output mapping, image conversion/resizing, manifest generation, generated-output validation, and Markdown media URL rewriting.
+The required quality gate runs content validation, generated-media validation, JS/TS linting, published-article Markdown linting, type-checking, unit tests, full collection-filter coverage, and a production build. Synthetic fixtures belong in `src/test/testdata/`; feature tests must not depend on production content. The media suite must cover source-to-output mapping, image conversion/resizing, manifest generation, generated-output validation, and Markdown media URL rewriting. A repository-boundary test must enforce both the clean root allowlist and the absence of analytics runtime, collector, middleware, endpoint, CSP allowance, and deployment configuration during MVP.
 
 ## Search and information architecture
 
@@ -64,7 +66,7 @@ The public UI uses “entries” and “articles,” never “nodes.” Filters 
 
 ## Deployment
 
-GitHub Actions is the pull-request quality gate only. It must not hold Cloudflare deployment, R2, or media-upload credentials. Cloudflare Pages connects to GitHub and builds `main` with:
+GitHub Actions is the pull-request quality gate only. It must not hold Cloudflare deployment, R2, analytics, or media-upload credentials. Its npm steps run from `src/`. Cloudflare Pages connects to GitHub, uses `src` as the project root, and builds `main` with:
 
 ```text
 npm ci && npm run check && npm run build

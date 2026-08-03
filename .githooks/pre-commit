@@ -1,2 +1,2 @@
 #!/bin/sh
-npm run media:prepare -- --stage
+node src/scripts/generate-sized-media.mjs --stage

@@ -1,6 +1,5 @@
 import { filterCollection, filtersAreActive } from './scripts/collection-filter.mjs';
 import { articleHeaderMarkup } from './scripts/article-view.mjs';
-import { createAnalyticsTracker } from './scripts/analytics.mjs';
 
 /*
   Prototype content deliberately contains navigation metadata and the requester's
@@ -63,9 +62,6 @@ const dialogInput = document.querySelector('#dialog-search-input');
 const dialogResults = document.querySelector('#dialog-results');
 const globalInput = document.querySelector('#global-search-input');
 const globalSuggestions = document.querySelector('#global-search-suggestions');
-
-// Development never sends analytics, even if an endpoint has been configured.
-const analytics = createAnalyticsTracker({ endpoint: import.meta.env.VITE_ANALYTICS_ENDPOINT ?? '', isDevelopment: import.meta.env.DEV });
 
 const state = { route: 'home', category: null, article: null };
 const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
@@ -331,16 +327,12 @@ function renderAbout() {
 
 function route(resetScroll = true) {
   if (dialog.open) dialog.close();
-  analytics.stopPage();
   const hash = window.location.hash.replace(/^#/, '') || 'home';
   const [kind, id] = hash.split('/');
   if (kind === 'category') renderCategory(id);
   else if (kind === 'article') renderArticle(id);
   else if (kind === 'about') renderAbout();
   else renderHome();
-  analytics.startPage({ routeKind: kind, contentId: id });
-  analytics.observeSections(main.querySelector('.article-markdown'));
-  analytics.observeMedia(main);
   if (resetScroll) window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
@@ -380,7 +372,6 @@ document.addEventListener('click', (event) => {
   const searchResult = event.target.closest('[data-search-result]');
   const suggestion = event.target.closest('[data-suggestion]');
   const scrollTarget = event.target.closest('[data-scroll]');
-  const link = event.target.closest('a[href]');
   if (categoryButton) { window.location.hash = `category/${categoryButton.dataset.category}`; }
   if (treeCategory) {
     const children = treeCategory.parentElement.nextElementSibling;
@@ -393,8 +384,6 @@ document.addEventListener('click', (event) => {
   if (searchResult) { dialog.close(); window.location.hash = `article/${searchResult.dataset.searchResult}`; }
   if (suggestion) { globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); window.location.hash = `article/${suggestion.dataset.suggestion}`; }
   if (scrollTarget) { document.querySelector(scrollTarget.dataset.scroll)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-  if (link?.hasAttribute('download') || /\/downloads\//i.test(link?.getAttribute('href') ?? '')) analytics.trackInteraction('download_click');
-  else if (/^https?:/i.test(link?.href ?? '') && new URL(link.href).origin !== window.location.origin) analytics.trackInteraction('outbound_click');
 });
 
 document.addEventListener('keydown', (event) => {
@@ -403,22 +392,18 @@ document.addEventListener('keydown', (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); openSearch(globalInput.value); }
 });
 
-document.querySelector('#global-search').addEventListener('submit', (event) => { event.preventDefault(); analytics.trackSearch(globalInput.value, searchableEntries(globalInput.value).length); openSearch(globalInput.value); });
+document.querySelector('#global-search').addEventListener('submit', (event) => { event.preventDefault(); openSearch(globalInput.value); });
 globalInput.addEventListener('input', () => {
   clearTimeout(suggestionTimer);
   suggestionTimer = setTimeout(updateGlobalSuggestions, 500);
 });
 globalInput.addEventListener('blur', () => setTimeout(() => { globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); }, 150));
-document.querySelector('#dialog-search-form').addEventListener('submit', (event) => { event.preventDefault(); analytics.trackSearch(dialogInput.value, searchableEntries(dialogInput.value).length); search(dialogInput.value); });
+document.querySelector('#dialog-search-form').addEventListener('submit', (event) => { event.preventDefault(); search(dialogInput.value); });
 dialogInput.addEventListener('input', () => search(dialogInput.value));
 document.querySelector('#search-dialog-close').addEventListener('click', () => dialog.close());
 document.querySelector('#sidebar-open').addEventListener('click', () => app.classList.add('sidebar-open'));
 document.querySelector('#sidebar-close').addEventListener('click', () => app.classList.remove('sidebar-open'));
 window.addEventListener('hashchange', () => { app.classList.remove('sidebar-open'); route(); });
-window.addEventListener('scroll', () => {
-  const maximum = document.documentElement.scrollHeight - window.innerHeight;
-  if (maximum > 0) analytics.trackScrollDepth(window.scrollY / maximum);
-}, { passive: true });
 
 let loadedContentAt = '';
 async function loadPublishedContent(refresh = false) {

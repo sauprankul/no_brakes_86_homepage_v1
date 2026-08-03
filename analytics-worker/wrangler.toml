@@ -1,7 +1,0 @@
-name = "no-brakes-analytics"
-main = "src/index.mjs"
-compatibility_date = "2026-08-02"
-
-[[analytics_engine_datasets]]
-binding = "ANALYTICS"
-dataset = "no_brakes_analytics"

@@ -3,10 +3,9 @@ import path from 'node:path';
 import YAML from 'yaml';
 import { renderArticleMarkdown } from './content-compiler.mjs';
 import { IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
+import { contentRoot, publicRoot } from './project-paths.mjs';
 
-const root = process.cwd();
-const contentRoot = path.join(root, 'Content');
-const outputFile = path.join(root, 'public', 'content-index.json');
+const outputFile = path.join(publicRoot, 'content-index.json');
 const isWatchMode = process.argv.includes('--watch');
 const includeDrafts = process.argv.includes('--include-drafts');
 const touchUpdates = process.argv.includes('--touch-updates');
@@ -67,7 +66,7 @@ async function copyDownloads(directory, nodeId) {
   try {
     const files = await filesIn(downloadsDirectory);
     await Promise.all(files.map(async (file) => {
-      const destination = path.join(root, 'public', 'downloads', nodeId, path.relative(downloadsDirectory, file));
+      const destination = path.join(publicRoot, 'downloads', nodeId, path.relative(downloadsDirectory, file));
       await mkdir(path.dirname(destination), { recursive: true });
       await copyFile(file, destination);
     }));
@@ -81,7 +80,7 @@ async function copySizedMedia(directory, nodeId) {
   try {
     const files = await filesIn(sizedDirectory);
     await Promise.all(files.filter((file) => path.basename(file) !== '.media-manifest.json').map(async (file) => {
-      const destination = path.join(root, 'public', 'media', nodeId, path.relative(sizedDirectory, file));
+      const destination = path.join(publicRoot, 'media', nodeId, path.relative(sizedDirectory, file));
       await mkdir(path.dirname(destination), { recursive: true });
       await copyFile(file, destination);
     }));
@@ -115,7 +114,7 @@ function slugFrom(file) {
 }
 
 async function build() {
-  await rm(path.join(root, 'public', 'media'), { recursive: true, force: true });
+  await rm(path.join(publicRoot, 'media'), { recursive: true, force: true });
   const configs = (await filesIn(contentRoot)).filter((file) => path.basename(file) === 'config.yaml');
   const entries = await Promise.all(configs.map(async (file) => ({ file, config: await normaliseArticle(file, await readYaml(file)) })));
   const nodes = await Promise.all(entries.map(async ({ file, config }) => {

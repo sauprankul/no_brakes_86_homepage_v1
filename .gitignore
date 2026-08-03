@@ -1,11 +1,9 @@
 node_modules/
 dist/
-public/content-index.json
-public/media/
-public/downloads/
+src/public/content-index.json
+src/public/media/
+src/public/downloads/
 **/Downloads/
 **/Media/
 coverage/
-.env
-.env.*
-!.env.example
+.vite/

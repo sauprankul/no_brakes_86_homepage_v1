@@ -1,8 +1,8 @@
-import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { publishedMarkdownFiles } from './published-markdown-files.mjs';
+import { contentRoot } from './project-paths.mjs';
 
-const files = await publishedMarkdownFiles(path.join(process.cwd(), 'Content'));
+const files = await publishedMarkdownFiles(contentRoot);
 if (!files.length) {
   console.log('No published article Markdown files; skipping Markdown lint.');
   process.exit(0);
