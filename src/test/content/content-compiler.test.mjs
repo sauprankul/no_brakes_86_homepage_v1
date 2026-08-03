@@ -29,3 +29,10 @@ test('maps authored Media image and video references to committed SizedMedia fil
   assert.match(rendered.html, /src="\/media\/round-1\/lap\.mp4"/);
   assert.match(rendered.html, /<video controls loop playsinline>/);
 });
+
+test('wraps every authored Markdown table for the shared responsive table presentation', () => {
+  const rendered = renderArticleMarkdown('| Pos. | Driver |\n| --- | --- |\n| 1 | Ivan Larionov |', 'results');
+  assert.match(rendered.html, /<div class="article-table-scroll"><table>/);
+  assert.match(rendered.html, /<th>Pos\.<\/th>/);
+  assert.match(rendered.html, /<td>Ivan Larionov<\/td>/);
+});

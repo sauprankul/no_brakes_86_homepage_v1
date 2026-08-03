@@ -52,6 +52,7 @@ export function renderArticleMarkdown(markdown, nodeId) {
       video: ['src', 'poster', 'controls', 'loop', 'muted', 'autoplay', 'playsinline', 'preload', 'width', 'height'],
     },
   });
-  const html = sizedMediaMarkup(safeHtml.replace(/<a href="\.\/Downloads\/([^"?#]+)">([^<]+)<\/a>/g, (_match, file, label) => downloadMarkup(`/downloads/${nodeId}/${encodeURIComponent(file)}`, label)), nodeId);
+  const withTableContainers = safeHtml.replace(/<table([^>]*)>([\s\S]*?)<\/table>/g, '<div class="article-table-scroll"><table$1>$2</table></div>');
+  const html = sizedMediaMarkup(withTableContainers.replace(/<a href="\.\/Downloads\/([^"?#]+)">([^<]+)<\/a>/g, (_match, file, label) => downloadMarkup(`/downloads/${nodeId}/${encodeURIComponent(file)}`, label)), nodeId);
   return { html, headings };
 }

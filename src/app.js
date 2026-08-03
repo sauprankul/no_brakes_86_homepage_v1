@@ -174,23 +174,27 @@ function renderTree() {
     const open = state.treeRoot === category.id;
     const context = open ? sidebarContext({ categories, entries: articles, rootId: category.id, focusId: state.treeFocus }) : null;
     const contextEntry = context?.focus;
-    const contextId = contextEntry?.id ?? category.id;
     const contextHref = contextEntry ? entryHref(contextEntry) : `#category/${category.id}`;
-    const label = context?.path.length ? `${category.short} / ${context.path.map((entry) => entry.title).join(' / ')}` : category.short;
+    const label = category.short;
     const children = context?.children ?? [];
     const limited = navigationChildren(children);
+    const contextRows = (context?.path ?? []).map((entry, index) => {
+      const active = state.article === entry.id || state.category === entry.id;
+      const count = directChildren(entry.id).length;
+      return `<a class="${navigationEntryClasses(entry, { active, baseClass: 'tree__context', previewMode: import.meta.env.DEV })}" data-tree-context="${entry.id}" data-tree-root="${category.id}" href="${entryHref(entry)}" style="--tree-depth:${index + 1}" ${active ? 'aria-current="page"' : ''}><span class="tree__folder" aria-hidden="true">□</span><span class="tree__label">${esc(entry.title)}</span><span class="tree__count">${count}</span></a>`;
+    }).join('');
     const entries = limited.visible.map((entry) => {
       const active = state.article === entry.id || state.category === entry.id;
       return `<a class="${navigationEntryClasses(entry, { active, previewMode: import.meta.env.DEV })}" data-tree-entry="${entry.id}" href="${entryHref(entry)}" ${active ? 'aria-current="page"' : ''}>${esc(entry.title)}</a>`;
     }).join('');
-    const back = contextEntry ? `<button class="tree__back" type="button" data-tree-back="${category.id}">← Back</button>` : '';
+    const back = contextEntry ? `<button class="tree__back" type="button" data-tree-back="${category.id}">^ Collapse</button>` : '';
     const seeAll = limited.hasMore ? `<a class="tree__see-all" href="${contextHref}">See all ${children.length} entries →</a>` : '';
     return `
       <section class="tree__section">
-        <a class="${navigationEntryClasses(category, { active: state.category === category.id, baseClass: 'tree__category', previewMode: import.meta.env.DEV })}" data-tree-context="${contextId}" data-tree-root="${category.id}" href="${contextHref}" title="${esc(label)}" ${state.category === category.id ? 'aria-current="page"' : ''}>
+        <a class="${navigationEntryClasses(category, { active: state.category === category.id, baseClass: 'tree__category', previewMode: import.meta.env.DEV })}" data-tree-context="${category.id}" data-tree-root="${category.id}" href="#category/${category.id}" ${state.category === category.id ? 'aria-current="page"' : ''}>
           <span class="tree__folder" aria-hidden="true">□</span><span class="tree__label">${esc(label)}</span><span class="tree__count">${category.count}</span>
         </a>
-        <div class="tree__items" ${open ? '' : 'hidden'}>${back}${entries}${seeAll}</div>
+        <div class="tree__items" ${open ? '' : 'hidden'}>${contextRows}${back}${entries}${seeAll}</div>
       </section>`;
   }).join('');
 }

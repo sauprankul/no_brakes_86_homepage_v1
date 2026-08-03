@@ -39,7 +39,7 @@ Do not publish an article with a missing thumbnail alt text, empty title or unva
 ## Navigation
 
 - Support every depth of the archive in the left-side navigation without increasing its width. At most one top-level branch is expanded at a time; opening another closes the prior branch.
-- A first click on a branch expands it in place; clicking its already-expanded context opens that context’s page. A leaf opens immediately. Drilling replaces the branch’s visible list with its direct children; the branch label becomes `Top level / Child / …`, truncates safely, and provides a one-level Back control. This single-path model applies recursively with no depth limit.
+- A first click on a branch expands it in place; clicking its already-expanded context opens that context’s page. A leaf opens immediately. Drilling keeps every entry in the active path visible as its own, indented parent-styled row; row labels wrap instead of truncating. A `^ Collapse` control under the active entry moves up one level. This single-path model applies recursively with no depth limit.
 - Show no more than five children for an expanded context. When more exist, a “See all” link opens the context page and its article or preview list.
 - The selected entry and its current navigation path are visually clear. Route changes open the selected entry’s parent context.
 - Breadcrumbs link back through the complete hierarchy, starting with `Home`; Home itself shows no breadcrumb.
@@ -73,6 +73,7 @@ Index author article content only: mark the article body with `data-pagefind-bod
 ## Article experience
 
 - Convert each `article.md` directly to sanitized HTML at build time. Do not insert hardcoded gallery, author-note, download, or section placeholder blocks into authored articles.
+- Render every Markdown table in a responsive scroll container with a thin yellow perimeter, thin gray cell rules, centered content, generous padding, and a yellow header with dark text.
 - Resolve every article’s top-level category through its full parent chain so nested articles always render their authored Markdown rather than an empty child-preview page.
 - Render an article page’s H1 title and optional subtitle from its `config.yaml`; authors do not need to repeat either in `article.md`.
 - Generate the “On this page” box from the article’s level-two and level-three Markdown headings. Hide it if none exist.

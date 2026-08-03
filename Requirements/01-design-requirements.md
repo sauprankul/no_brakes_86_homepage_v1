@@ -22,12 +22,13 @@ The homepage must therefore provide equal visual weight to `New` and `Hot`, side
 ## Layout requirements
 
 - At a viewport aspect ratio of 16:9 or wider, the left navigation is permanently visible: it has no hamburger control or close control. On narrower screens it is hideable, uses a left-chevron close control, and closes when the reader taps or clicks outside it.
-- The left navigation supports unlimited archive depth through a compact drill-in view without widening. Only one top-level branch is open. A first click on an entry with children expands that context; a later click on the already-expanded context opens its page. A leaf opens immediately. Show at most five children and end longer lists with a “See all” link to the parent page.
+- The left navigation supports unlimited archive depth through a compact drill-in view without widening. Only one top-level branch is open. A first click on an entry with children expands that context; a later click on the already-expanded context opens its page. A leaf opens immediately. Keep each expanded path entry as its own parent-styled, indented row; never concatenate path labels or truncate row text. A `^ Collapse` action sits beneath the current expanded entry. Show at most five children and end longer lists with a “See all” link to the parent page.
 - The top bar is always visible and contains the global search field and a bright Search action. At 320px wide, the action and its suggestion dropdown remain legible and usable rather than collapsing into a few-character field.
 - Desktop layouts must remain calm up to a 32:9 ultrawide viewport: cap reading lines and keep the page centered rather than stretching article prose.
 - Article page: a wide, readable main column and a short on-page navigation rail. The rail moves above content on mobile.
 - Category page: show the long category title, a category description, filters, then dense visual preview rows.
 - Each preview row needs a thumbnail, type/date, long title, subtitle and right-aligned tag chips. Thumbnail images must carry meaningful alt text in production.
+- Markdown tables use a responsive horizontal-scroll container, a thin yellow outer border, thin gray cell dividers, centered cell content, generous cell padding, and a sunflower-yellow header with dark text.
 - Empty state is intentional. No fabricated “sample lap analysis” or invented mechanical conclusions are allowed.
 
 ## Interaction requirements
