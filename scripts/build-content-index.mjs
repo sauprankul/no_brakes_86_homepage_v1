@@ -2,7 +2,7 @@ import { access, copyFile, mkdir, readFile, readdir, rm, watch, writeFile } from
 import path from 'node:path';
 import YAML from 'yaml';
 import { renderArticleMarkdown } from './content-compiler.mjs';
-import { publicMediaPath } from './media-pipeline.mjs';
+import { IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
 
 const root = process.cwd();
 const contentRoot = path.join(root, 'Content');
@@ -40,7 +40,11 @@ async function findThumbnail(directory, nodeId, configured) {
   if (await exists(path.join(directory, 'SizedMedia', 'thumbnail.jpg'))) return `/media/${encodeURIComponent(nodeId)}/thumbnail.jpg`;
   if (/^\.\/Media\//i.test(configured ?? '')) {
     try {
-      return publicMediaPath(nodeId, configured);
+      const source = configured.replace(/^\.\/Media\//i, '');
+      if (!IMAGE_EXTENSIONS.has(path.extname(source).toLowerCase())) return '';
+      const generated = sizedMediaRelativePath(source, 'image');
+      if (await exists(path.join(directory, 'SizedMedia', generated))) return publicMediaPath(nodeId, configured);
+      return '';
     } catch {
       return '';
     }

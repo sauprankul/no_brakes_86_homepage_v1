@@ -125,6 +125,10 @@ Do not hand-edit `SizedMedia/` or its `.media-manifest.json`. Change the source 
 
 Cloudflare Pages will deploy every merge to `main` through its Git integration. GitHub Actions does not hold a Cloudflare token and does not deploy. This keeps one authoritative deployment path.
 
+## Required local runtime
+
+Use Node.js **22.12 or newer** locally as well as in Cloudflare Pages. The current Markdown lint and HTML sanitization toolchain uses this supported runtime to receive its security fixes. Check it with `node --version`; if it is lower, install the current Node 22 LTS release before relying on the authoring hook or local quality gate. After upgrading, run `npm install` once again.
+
 ## Cloudflare Free security setup
 
 Perform these steps on the `nobrakes86.com` zone, not inside a Worker:

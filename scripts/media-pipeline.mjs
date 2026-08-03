@@ -36,14 +36,14 @@ async function directoriesNamed(directory, name) {
   return nested.flat();
 }
 
-function mediaTypeFor(file) {
+export function mediaTypeFor(file) {
   const extension = path.extname(file).toLowerCase();
   if (IMAGE_EXTENSIONS.has(extension)) return 'image';
   if (VIDEO_EXTENSIONS.has(extension)) return 'video';
   throw new Error(`${toPosix(file)}: unsupported Media extension "${extension || '(none)'}". Supported images: ${[...IMAGE_EXTENSIONS].join(', ')}; videos: ${[...VIDEO_EXTENSIONS].join(', ')}.`);
 }
 
-function sizedRelativePath(sourceRelative, type) {
+export function sizedMediaRelativePath(sourceRelative, type) {
   const extension = path.extname(sourceRelative);
   return `${sourceRelative.slice(0, -extension.length)}.${type === 'image' ? 'jpg' : 'mp4'}`;
 }
@@ -144,7 +144,7 @@ export async function generateSizedMedia(contentRoot) {
     for (const source of sources) {
       const relative = toPosix(path.relative(mediaDirectory, source));
       const type = mediaTypeFor(source);
-      const output = sizedRelativePath(relative, type);
+      const output = sizedMediaRelativePath(relative, type);
       if (outputs.has(output)) throw new Error(`${toPosix(source)}: generated path collides with ${toPosix(outputs.get(output))}. Rename one source file.`);
       outputs.set(output, source);
     }
@@ -206,5 +206,5 @@ export async function validateSizedMedia(contentRoot) {
 export function publicMediaPath(nodeId, sourcePath) {
   const normalized = sourcePath.replaceAll('\\', '/').replace(/^\.\/Media\//i, '');
   const type = mediaTypeFor(normalized);
-  return `/media/${encodeURIComponent(nodeId)}/${sizedRelativePath(normalized, type).split('/').map(encodeURIComponent).join('/')}`;
+  return `/media/${encodeURIComponent(nodeId)}/${sizedMediaRelativePath(normalized, type).split('/').map(encodeURIComponent).join('/')}`;
 }

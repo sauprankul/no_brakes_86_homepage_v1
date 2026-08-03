@@ -1,6 +1,7 @@
 import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
+import { IMAGE_EXTENSIONS, mediaTypeFor, sizedMediaRelativePath } from './media-pipeline.mjs';
 
 const contentRoot = path.join(process.cwd(), 'Content');
 const errors = [];
@@ -24,6 +25,12 @@ async function exists(file) {
 
 async function thumbnailFor(directory, configured) {
   if (await exists(path.join(directory, 'SizedMedia', 'thumbnail.jpg'))) return './SizedMedia/thumbnail.jpg';
+  if (/^\.\/Media\//i.test(configured ?? '')) {
+    const source = configured.replace(/^\.\/Media\//i, '');
+    if (!IMAGE_EXTENSIONS.has(path.extname(source).toLowerCase())) return '';
+    const generated = sizedMediaRelativePath(source, 'image');
+    return await exists(path.join(directory, 'SizedMedia', generated)) ? `./SizedMedia/${generated}` : '';
+  }
   return configured ?? '';
 }
 
@@ -53,12 +60,12 @@ for (const node of nodes) {
 
   if (!config.parent) errors.push(`${label}: root nodes are structural and must not be published.`);
   if (!isNonEmptyString(config.subtitle)) errors.push(`${label}: published nodes need a non-empty subtitle.`);
-  if (!isNonEmptyString(thumbnail)) errors.push(`${label}: published nodes need a generated SizedMedia/thumbnail.jpg or a Media-backed thumbnail field.`);
+  if (!isNonEmptyString(thumbnail)) errors.push(`${label}: published nodes need a generated SizedMedia thumbnail. Run npm run media:prepare locally.`);
   if (!isDate(config.published_at)) errors.push(`${label}: published_at must be YYYY-MM-DD for a published node.`);
   if (!isTimestamp(config.updated_at)) errors.push(`${label}: updated_at must be an ISO date or timestamp for a published node.`);
   if (isDate(config.published_at) && isTimestamp(config.updated_at) && config.updated_at.slice(0, 10) < config.published_at) errors.push(`${label}: updated_at cannot be before published_at.`);
   if (!Array.isArray(config.tags) || config.tags.some((tag) => !isNonEmptyString(tag))) errors.push(`${label}: tags must be an array of non-empty strings.`);
-  if (isNonEmptyString(thumbnail) && !/^(https?:\/\/|\/|\.\/Media\/)/.test(thumbnail)) {
+  if (isNonEmptyString(thumbnail) && !/^(https?:\/\/|\/|\.\/SizedMedia\/)/.test(thumbnail)) {
     const thumbnailFile = path.resolve(dir, thumbnail);
     if (!await exists(thumbnailFile)) errors.push(`${label}: thumbnail "${thumbnail}" does not exist.`);
   }
@@ -73,6 +80,18 @@ for (const node of nodes) {
     const id = escapeRegExp(child.config.id);
     const linked = new RegExp(`\\]\\([^)]*${id}[^)]*\\)|\\[\\[${id}(?:\\|[^\\]]+)?\\]\\]`, 'i').test(article);
     if (!linked) errors.push(`${path.relative(process.cwd(), articleFile)}: article with child nodes must link to "${child.config.id}".`);
+  }
+  if (node.config.published !== true) continue;
+  for (const match of article.matchAll(/(?:\]\(|(?:src|href)\s*=\s*["'])\.\/Media\/([^\s)"']+)/gi)) {
+    const source = match[1];
+    try {
+      const generated = sizedMediaRelativePath(source, mediaTypeFor(source));
+      if (!await exists(path.join(node.dir, 'SizedMedia', generated))) {
+        errors.push(`${path.relative(process.cwd(), articleFile)}: Media/${source} needs generated SizedMedia/${generated}. Run npm run media:prepare locally.`);
+      }
+    } catch (error) {
+      errors.push(`${path.relative(process.cwd(), articleFile)}: Media/${source} is not a supported publishable media reference (${error.message}).`);
+    }
   }
 }
 
