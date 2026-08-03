@@ -1,8 +1,8 @@
-import path from 'node:path';
 import { validateSizedMedia } from './media-pipeline.mjs';
+import { contentRoot } from './project-paths.mjs';
 
 try {
-  await validateSizedMedia(path.join(process.cwd(), 'Content'));
+  await validateSizedMedia(contentRoot);
   console.log('Sized media validation passed.');
 } catch (error) {
   console.error(`Sized media validation failed: ${error.message}`);

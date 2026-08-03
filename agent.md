@@ -4,13 +4,15 @@
 
 This repository is a static, Markdown-authored personal archive. Preserve the `Content/` source-of-truth model, keep `config.yaml` as the metadata contract for every entry, and keep production builds publish-gated. `Media/` holds ignored author originals; its deterministic, committed `SizedMedia/` counterpart is the only media that production serves. Do not commit author workspaces such as `Downloads/` or `Media/`.
 
+Repository software is MIT-licensed. Authored material under `Content/` is all-rights-reserved under `Content/COPYRIGHT`; never treat that material as covered by the software license.
+
 ## Assumption and scope discipline
 
 Before acting on a user request, stop and explicitly push back when the request appears to rest on a factual misunderstanding, contradicts an earlier requirement without acknowledging the tradeoff, or materially expands cost, complexity, security, privacy, or operational risk. Explain the concrete conflict, correct the misunderstanding with evidence where possible, and ask for direction before changing the repository. Do not silently implement a risky or expensive interpretation just because it is technically possible.
 
 ## Verification before handoff
 
-Run the relevant quality gates before handing off implementation work. For content, rendering, or UI changes, run `npm run check` and `npm run build`. If the change affects authoring latency, run `npm run benchmark:refresh`. Preserve unrelated author edits and call them out rather than overwriting them.
+Run commands from `src/`. Run the relevant quality gates before handing off implementation work. For content, rendering, or UI changes, run `npm run check` and `npm run build`. If the change affects authoring latency, run `npm run benchmark:refresh`. Preserve unrelated author edits and call them out rather than overwriting them.
 
 ## PR format rules
 

@@ -13,7 +13,7 @@ Every navigable entry gets its own folder. Its `config.yaml` is canonical metada
 
 ## Media workflow
 
-Put full-resolution originals in the entry's ignored `Media/` folder. Before committing, run `npm run media:prepare` (the pre-commit hook also does this). It creates a committed `SizedMedia/` folder containing only public JPEG/MP4 derivatives that Cloudflare Pages deploys.
+Put full-resolution originals in the entry's ignored `Media/` folder. Before committing, run `npm run media:prepare` from `src/` (the pre-commit hook also does this). It creates a committed `SizedMedia/` folder containing only public JPEG/MP4 derivatives that Cloudflare Pages deploys.
 
 Reference the original path in Markdown, for example `![Apex](./Media/apex.heic)` or `<source src="./Media/lap.mov">`. The rendered site automatically uses the corresponding `SizedMedia/` asset. Use `Media/thumbnail.<extension>` for the preview/banner image. Never hand-edit `SizedMedia/`; edit the original and regenerate it instead.
 

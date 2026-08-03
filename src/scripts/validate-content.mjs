@@ -2,8 +2,8 @@ import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
 import { IMAGE_EXTENSIONS, mediaTypeFor, sizedMediaRelativePath } from './media-pipeline.mjs';
+import { contentRoot, repositoryRelative } from './project-paths.mjs';
 
-const contentRoot = path.join(process.cwd(), 'Content');
 const errors = [];
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
 const isDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '') && !Number.isNaN(Date.parse(`${value}T12:00:00Z`));
@@ -44,16 +44,16 @@ const nodeById = new Map();
 
 for (const node of nodes) {
   const { config, file } = node;
-  const label = path.relative(process.cwd(), file);
+  const label = repositoryRelative(file);
   if (!isNonEmptyString(config.id) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(config.id)) errors.push(`${label}: id must be lowercase kebab-case.`);
   if (!isNonEmptyString(config.title)) errors.push(`${label}: title must be a non-empty string.`);
-  if (config.id && nodeById.has(config.id)) errors.push(`${label}: duplicate id "${config.id}" (also in ${path.relative(process.cwd(), nodeById.get(config.id).file)}).`);
+  if (config.id && nodeById.has(config.id)) errors.push(`${label}: duplicate id "${config.id}" (also in ${repositoryRelative(nodeById.get(config.id).file)}).`);
   else if (config.id) nodeById.set(config.id, node);
 }
 
 for (const node of nodes) {
   const { config, file, dir } = node;
-  const label = path.relative(process.cwd(), file);
+  const label = repositoryRelative(file);
   if (config.parent && !nodeById.has(config.parent)) errors.push(`${label}: parent "${config.parent}" does not exist.`);
   if (config.published !== true) continue;
   const thumbnail = await thumbnailFor(dir, config.thumbnail);
@@ -79,7 +79,7 @@ for (const node of nodes) {
   for (const child of children) {
     const id = escapeRegExp(child.config.id);
     const linked = new RegExp(`\\]\\([^)]*${id}[^)]*\\)|\\[\\[${id}(?:\\|[^\\]]+)?\\]\\]`, 'i').test(article);
-    if (!linked) errors.push(`${path.relative(process.cwd(), articleFile)}: article with child nodes must link to "${child.config.id}".`);
+    if (!linked) errors.push(`${repositoryRelative(articleFile)}: article with child nodes must link to "${child.config.id}".`);
   }
   if (node.config.published !== true) continue;
   for (const match of article.matchAll(/(?:\]\(|(?:src|href)\s*=\s*["'])\.\/Media\/([^\s)"']+)/gi)) {
@@ -87,10 +87,10 @@ for (const node of nodes) {
     try {
       const generated = sizedMediaRelativePath(source, mediaTypeFor(source));
       if (!await exists(path.join(node.dir, 'SizedMedia', generated))) {
-        errors.push(`${path.relative(process.cwd(), articleFile)}: Media/${source} needs generated SizedMedia/${generated}. Run npm run media:prepare locally.`);
+        errors.push(`${repositoryRelative(articleFile)}: Media/${source} needs generated SizedMedia/${generated}. Run npm run media:prepare locally.`);
       }
     } catch (error) {
-      errors.push(`${path.relative(process.cwd(), articleFile)}: Media/${source} is not a supported publishable media reference (${error.message}).`);
+      errors.push(`${repositoryRelative(articleFile)}: Media/${source} is not a supported publishable media reference (${error.message}).`);
     }
   }
 }

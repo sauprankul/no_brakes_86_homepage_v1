@@ -83,6 +83,12 @@ Index author article content only: mark the article body with `data-pagefind-bod
 - Node pages must never infer “article” from a filename convention such as `_node.yaml` or from a metadata type field. `config.yaml` plus the presence of `article.md` is the source of truth.
 - Short clips use native `<video>` playback: muted/autoplay/loop only where intentional, with visible pause and scrub controls, `playsinline`, a poster image and an accessible text alternative. Do not replace controls with a non-scrubbable decorative animation.
 
+## Analytics — deferred until after MVP
+
+- MVP production and development builds must contain no analytics client, collector endpoint, tracking script, cookie, identifier, telemetry transport, Analytics Engine binding, or analytics deployment job.
+- All analytics product, privacy, consent, retention, regional-policy, owner-device-exclusion, provider, event-schema, performance-budget, and reporting decisions are deferred until the MVP is complete.
+- Any future analytics proposal is a new scoped feature. It must begin with current legal/provider/cost research, explicit owner approval, updated requirements, synthetic tests, and a deliberately chosen activation mechanism. No pre-MVP analytics design is authoritative merely because it remains in Git history.
+
 ## SEO requirements
 
 - One stable canonical URL per article; preserve it indefinitely and 301 redirect any renamed slug.

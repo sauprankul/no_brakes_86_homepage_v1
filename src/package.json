@@ -2,6 +2,7 @@
   "name": "no-brakes",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
@@ -17,7 +18,7 @@
     "lint": "eslint .",
     "lint:md": "node scripts/lint-published-markdown.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --test test/article-view.test.mjs test/content-compiler.test.mjs test/collection-filter.test.mjs test/media-pipeline.test.mjs test/published-markdown-files.test.mjs",
+    "test": "node --test test/article-view.test.mjs test/content-compiler.test.mjs test/collection-filter.test.mjs test/media-pipeline.test.mjs test/published-markdown-files.test.mjs test/repository-boundaries.test.mjs",
     "test:collection": "c8 --all --check-coverage --lines 100 --functions 100 --branches 100 --include=scripts/collection-filter.mjs node --test test/collection-filter.test.mjs",
     "benchmark:refresh": "node scripts/benchmark-content-refresh.mjs",
     "check": "npm run media:validate && npm run validate:content && npm run lint && npm run lint:md && npm run typecheck && npm run test && npm run test:collection",
