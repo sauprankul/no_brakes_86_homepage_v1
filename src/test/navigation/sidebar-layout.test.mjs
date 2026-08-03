@@ -14,3 +14,10 @@ test('drilled navigation keeps each path entry as a separate full-size row with 
   assert.match(stylesheet, /\.tree__category, \.tree__context \{ font-size: \.83rem; font-weight: 700; \}/);
   assert.match(stylesheet, /\.tree__label \{ min-width: 0; overflow-wrap: anywhere; white-space: normal;/);
 });
+
+test('the whole sidebar is hideable whenever the viewport is narrower than 16:9', () => {
+  assert.match(app, /classList\.toggle\('sidebar-collapsible', !wide\)/);
+  assert.match(stylesheet, /\.app-shell\.sidebar-collapsible \.sidebar \{[^}]*transform: translateX\(-105%\)/);
+  assert.match(stylesheet, /\.app-shell\.sidebar-collapsible\.sidebar-open \.sidebar \{ transform: translateX\(0\); \}/);
+  assert.match(stylesheet, /\.app-shell\.sidebar-collapsible \.menu-button, \.app-shell\.sidebar-collapsible \.sidebar__close \{ display: grid; \}/);
+});

@@ -27,11 +27,15 @@ export function normalizeRoutePath(value) {
   return path.length > 1 ? path.replace(/\/+$/, '') : '/';
 }
 
+export function entryRoutePath(roots, entries, entry) {
+  return entry.path ? normalizeRoutePath(entry.path) : contentPath([...roots, ...entries], entry);
+}
+
 export function resolveContentRoute(roots, entries, pathname) {
   const path = normalizeRoutePath(pathname);
   if (path === '/') return { type: 'home', entry: null };
   if (path === '/about') return { type: 'about', entry: null };
-  const entry = [...roots, ...entries].find((candidate) => normalizeRoutePath(candidate.path) === path);
+  const entry = [...roots, ...entries].find((candidate) => entryRoutePath(roots, entries, candidate) === path);
   if (!entry) return { type: 'not-found', entry: null };
   return { type: entry.hasArticle === true ? 'article' : 'list', entry };
 }

@@ -1,10 +1,22 @@
 import { filterCollection, filtersAreActive, tagOptions } from './scripts/collection-filter.mjs';
 import { articleHeaderMarkup } from './scripts/article-view.mjs';
+import { installClientLogBridge } from './scripts/client-log-bridge.mjs';
 import { selectContentIndex } from './scripts/content-index-client.mjs';
-import { normalizeRoutePath, resolveContentRoute } from './scripts/content-routes.mjs';
+import { entryRoutePath, normalizeRoutePath, resolveContentRoute } from './scripts/content-routes.mjs';
 import { hierarchyPath, navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
 import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar } from './scripts/navigation-policy.mjs';
-import { previewPublicationBadge } from './scripts/preview-status.mjs';
+import { previewPublicationBadge, previewPublicationDate } from './scripts/preview-status.mjs';
+
+if (import.meta.env.DEV) installClientLogBridge({
+  consoleObject: console,
+  windowObject: window,
+  send: (record) => fetch('/__dev/client-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+    keepalive: true,
+  }),
+});
 
 /*
   Prototype content deliberately contains navigation metadata and the requester's
@@ -79,6 +91,14 @@ function datePart(value) { return String(value ?? '').slice(0, 10); }
 function formatDate(date) { return dateFormatter.format(new Date(datePart(date) === date ? `${date}T12:00:00Z` : date)); }
 function esc(value) { return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character])); }
 
+function syncSidebarLayout() {
+  const wide = isWidescreen(window.innerWidth, window.innerHeight);
+  app.classList.toggle('sidebar-collapsible', !wide);
+  if (wide) app.classList.remove('sidebar-open');
+}
+
+syncSidebarLayout();
+
 function thumb(article) {
   if (article.thumbnail) return `<div class="thumb thumb--image"><img src="${esc(article.thumbnail)}" alt="" loading="lazy" decoding="async" /></div>`;
   return `<div class="thumb" aria-hidden="true"><span class="thumb__label">${esc(article.media)}</span><span class="thumb__line thumb__line--one"></span><span class="thumb__line thumb__line--two"></span><span class="thumb__corner"></span></div>`;
@@ -87,14 +107,15 @@ function thumb(article) {
 function tags(tags) { return `<div class="tags">${tags.map((tag) => `<span class="tag">${esc(tag)}</span>`).join('')}</div>`; }
 
 function articleRow(article, expanded = false) {
-  const dateLabel = article.date ? formatDate(article.date) : 'Draft';
+  const dateLabel = previewPublicationDate(article, formatDate);
+  const publicationDate = dateLabel ? `<span>${dateLabel}</span>` : '';
   const updated = article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated ${formatDate(article.updatedAt)}</span>` : '';
   const publication = previewPublicationBadge(article);
   return `
     <article class="article-row article-row--clickable" data-article="${article.id}" tabindex="0" aria-label="Open ${esc(article.title)}">
       ${thumb(article)}
       <div class="article-row__body">
-        <p class="article-row__meta"><span>${esc(article.type)}</span>${publication}<span>${dateLabel}</span>${updated}</p>
+        <p class="article-row__meta"><span>${esc(article.type)}</span>${publication}${publicationDate}${updated}</p>
         <a class="article-row__title" href="${esc(entryHref(article))}" data-article="${article.id}">${esc(article.title)}</a>
         <p class="article-row__summary">${esc(article.subtitle)}</p>
         ${tags(expanded ? article.tags : article.tags.slice(0, 3))}
@@ -130,7 +151,7 @@ function syncTreeToCurrentEntry() {
 }
 
 function entryHref(entry) {
-  return entry.path || `/${entry.id}`;
+  return entryRoutePath(categories, articles, entry);
 }
 
 function renderTree() {
@@ -505,6 +526,7 @@ document.querySelector('#search-dialog-close').addEventListener('click', () => d
 document.querySelector('#sidebar-open').addEventListener('click', () => app.classList.add('sidebar-open'));
 document.querySelector('#sidebar-close').addEventListener('click', () => app.classList.remove('sidebar-open'));
 window.addEventListener('popstate', () => { app.classList.remove('sidebar-open'); route(); });
+window.addEventListener('resize', syncSidebarLayout);
 
 let loadedContentAt = '';
 async function loadPublishedContent(refresh = false) {

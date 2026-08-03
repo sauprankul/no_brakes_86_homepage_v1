@@ -27,7 +27,7 @@ The homepage must therefore provide equal visual weight to `New` and `Hot`, side
 - Desktop layouts must remain calm up to a 32:9 ultrawide viewport: cap reading lines and keep the page centered rather than stretching article prose.
 - Article page: a wide, readable main column and a short on-page navigation rail. The rail moves above content on mobile.
 - Category page: show the long category title, a category description, filters, then dense visual preview rows.
-- Each preview row needs a thumbnail, type/date, long title, subtitle and right-aligned tag chips. Thumbnail images must carry meaningful alt text in production.
+- Each preview row needs a thumbnail, type/date when available, long title, subtitle and right-aligned tag chips. An unpublished preview uses the single red `Unpublished` status and must not repeat the same state as a separate `Draft` date label. Thumbnail images must carry meaningful alt text in production.
 - Markdown tables use a responsive horizontal-scroll container, a thin yellow outer border, thin gray cell dividers, centered cell content, generous cell padding, and a sunflower-yellow header with dark text.
 - Empty state is intentional. No fabricated “sample lap analysis” or invented mechanical conclusions are allowed.
 

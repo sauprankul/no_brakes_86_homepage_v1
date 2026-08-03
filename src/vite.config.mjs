@@ -19,6 +19,20 @@ export default defineConfig({
       server.watcher.add(contentIndex);
       server.watcher.on('add', notify);
       server.watcher.on('change', notify);
+      server.middlewares.use('/__dev/client-log', async (request, response, next) => {
+        if (request.method !== 'POST') return next();
+        try {
+          const record = await readJson(request);
+          const level = ['debug', 'info', 'log', 'warn', 'error'].includes(record.level) ? record.level : 'log';
+          console[level](`[browser:${level}] ${String(record.message ?? '')}`);
+          response.statusCode = 204;
+          response.end();
+        } catch (error) {
+          console.error(`[browser:error] Could not read browser log: ${error.message}`);
+          response.statusCode = 400;
+          response.end();
+        }
+      });
       server.middlewares.use('/__dev/publish', async (request, response, next) => {
         if (request.method !== 'POST') return next();
         try {

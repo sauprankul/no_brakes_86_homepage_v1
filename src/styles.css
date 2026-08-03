@@ -32,9 +32,13 @@ a { color: inherit; text-decoration: none; }
 .sidebar { position: fixed; z-index: 20; inset: 0 auto 0 0; display: flex; flex-direction: column; width: var(--sidebar-width); background: #17191c; border-right: 1px solid var(--line); }
 .content-frame { min-height: 100vh; margin-left: var(--sidebar-width); }
 .topbar { position: sticky; z-index: 10; top: 0; display: flex; align-items: center; gap: 18px; height: 72px; padding: 0 clamp(20px, 3vw, 52px); background: color-mix(in srgb, var(--ground) 92%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent); backdrop-filter: blur(16px); }
-.menu-button, .sidebar__close { display: none; }
+.icon-button.menu-button, .icon-button.sidebar__close { display: none; }
 .icon-button { display: grid; width: 38px; height: 38px; place-items: center; padding: 0; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 6px; font-size: 1.5rem; line-height: 1; }
 .icon-button:hover { background: var(--panel-raised); border-color: var(--line); }
+.app-shell.sidebar-collapsible .sidebar { width: min(var(--sidebar-width), 88vw); box-shadow: 10px 0 30px rgb(0 0 0 / .45); transform: translateX(-105%); transition: transform .18s ease; }
+.app-shell.sidebar-collapsible.sidebar-open .sidebar { transform: translateX(0); }
+.app-shell.sidebar-collapsible .content-frame { margin-left: 0; }
+.app-shell.sidebar-collapsible .menu-button, .app-shell.sidebar-collapsible .sidebar__close { display: grid; }
 
 .sidebar__brand { display: flex; align-items: center; justify-content: space-between; height: 72px; padding: 0 22px; border-bottom: 1px solid var(--line); }
 .brand { display: inline-flex; align-items: center; gap: 8px; color: #fff; font-size: .93rem; font-weight: 900; letter-spacing: .13em; }
@@ -235,10 +239,6 @@ kbd { padding: 1px 4px; background: #292d31; border: 1px solid #3a3f45; border-r
 }
 
 @media (max-width: 800px) {
-  .sidebar { width: min(320px, 88vw); box-shadow: 10px 0 30px rgb(0 0 0 / .45); transform: translateX(-105%); transition: transform .18s ease; }
-  .app-shell.sidebar-open .sidebar { transform: translateX(0); }
-  .content-frame { margin-left: 0; }
-  .menu-button, .sidebar__close { display: grid; }
   .topbar { gap: 10px; height: 62px; padding: 0 16px; }
   .breadcrumb { display: none; }
   .global-search { flex: 1 1 0; width: auto; min-width: 0; }
