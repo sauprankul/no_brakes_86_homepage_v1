@@ -115,13 +115,19 @@ Do not hand-edit `SizedMedia/` or its `.media-manifest.json`. Change the source 
    | Build command | `npm ci && npm run check && npm run build` |
    | Build output directory | `dist` |
    | Root directory | leave blank |
-   | Node.js version | `22` |
 
-6. Select **Save and Deploy**. Cloudflare reads the repository, runs the build, and publishes the contents of `dist/` to a temporary `*.pages.dev` URL.
-7. Open the deployment log. Do not proceed until `npm run check` and `npm run build` both pass there.
-8. In the Pages project, open **Custom domains -> Set up a custom domain**. Add `nobrakes86.com`, then add `www.nobrakes86.com` if you want it. Because the domain is registered and DNS-hosted at Cloudflare, accept the record change offered by the dashboard.
-9. Choose one canonical hostname (recommend `https://nobrakes86.com`) and configure the other to redirect to it. Verify HTTPS before enabling HSTS.
-10. In **Settings -> Builds**, leave `main` as the production branch. Pull requests may receive isolated Pages preview deployments; they still run the production publish gate, so drafts remain absent.
+6. In the build environment-variable area, add these plain-text variables for both **Production** and **Preview**:
+
+   | Variable | Value | Why |
+   | --- | --- | --- |
+   | `NODE_VERSION` | `22.12.0` | Pins the supported Node runtime instead of relying on a changing build-image default. |
+   | `SKIP_DEPENDENCY_INSTALL` | `1` | Prevents Pages from doing an automatic install before the deliberate, lockfile-respecting `npm ci` build command. |
+
+7. Select **Save and Deploy**. Cloudflare reads the repository, runs the build, and publishes the contents of `dist/` to a temporary `*.pages.dev` URL.
+8. Open the deployment log. Do not proceed until `npm run check` and `npm run build` both pass there.
+9. In the Pages project, open **Custom domains -> Set up a custom domain**. Add `nobrakes86.com`, then add `www.nobrakes86.com` if you want it. Because the domain is registered and DNS-hosted at Cloudflare, accept the record change offered by the dashboard.
+10. Choose one canonical hostname (recommend `https://nobrakes86.com`) and configure the other to redirect to it. Verify HTTPS before enabling HSTS.
+11. In **Settings -> Builds**, leave `main` as the production branch. Pull requests may receive isolated Pages preview deployments; they still run the production publish gate, so drafts remain absent.
 
 Cloudflare Pages will deploy every merge to `main` through its Git integration. GitHub Actions does not hold a Cloudflare token and does not deploy. This keeps one authoritative deployment path.
 

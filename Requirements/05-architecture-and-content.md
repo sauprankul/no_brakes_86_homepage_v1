@@ -6,6 +6,8 @@ Launch as a Vite-built static site on **Cloudflare Pages Free**. Use GitHub as t
 
 Cloudflare Pages serves the generated `dist/` directory as globally cached static assets. Static delivery is deliberately simple: a published site must not invoke server code for page rendering, media selection, geo blocking, search, or analytics. Cloudflare Free WAF custom rules, Bot Fight Mode, and the one available rate-limit rule provide the MVP edge protection.
 
+Cloudflare Pages and GitHub Actions must use Node.js 22.12 or newer. The Pages configuration must pin `NODE_VERSION=22.12.0`; it must set `SKIP_DEPENDENCY_INSTALL=1` and use `npm ci` in the build command so production builds are reproducible from `package-lock.json`.
+
 The website remains portable: static HTML, CSS, JavaScript, Markdown, YAML, and generated public media must be sufficient to rebuild it elsewhere.
 
 ## Node authoring model
