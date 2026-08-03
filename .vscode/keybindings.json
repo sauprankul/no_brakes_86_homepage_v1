@@ -1,0 +1,7 @@
+[
+  {
+    "key": "win+shift+w",
+    "command": "workbench.action.tasks.runTask",
+    "args": "No Brakes: live authoring preview"
+  }
+]
