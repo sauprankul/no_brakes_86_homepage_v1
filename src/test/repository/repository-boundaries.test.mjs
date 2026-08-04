@@ -39,3 +39,10 @@ test('the MVP contains no analytics runtime, collector, middleware, or deploymen
   assert.equal(await exists(path.join(repositoryRoot, 'analytics-worker')), false);
   assert.equal(await exists(path.join(repositoryRoot, 'functions')), false);
 });
+
+test('production assets do not require cross-origin loading on the custom domain', async () => {
+  const viteConfig = await readFile(path.join(appRoot, 'vite.config.mjs'), 'utf8');
+  assert.match(viteConfig, /name: 'same-origin-asset-loading'/);
+  assert.match(viteConfig, /order: 'post'/);
+  assert.match(viteConfig, /replace\(\/\\s\+crossorigin/);
+});

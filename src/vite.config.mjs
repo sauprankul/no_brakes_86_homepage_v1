@@ -51,6 +51,12 @@ export default defineConfig({
         }
       });
     },
+  }, {
+    name: 'same-origin-asset-loading',
+    transformIndexHtml: {
+      order: 'post',
+      handler: (html) => html.replace(/\s+crossorigin(?=\s|>)/g, ''),
+    },
   }],
   build: {
     rollupOptions: {
