@@ -481,7 +481,13 @@ document.addEventListener('click', async (event) => {
       const response = await fetch('/__dev/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: devPublish.dataset.devPublish }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Could not update publication state.');
-      devPublish.textContent = result.entry.published ? 'Published locally' : 'Unpublished locally';
+      const published = result.entry.published === true;
+      devPublish.classList.toggle('is-published', published);
+      devPublish.classList.toggle('is-unpublished', !published);
+      devPublish.setAttribute('aria-checked', String(published));
+      devPublish.setAttribute('aria-label', published ? 'Unpublish this entry locally' : 'Publish this entry locally');
+      devPublish.textContent = published ? 'Published' : 'Unpublished';
+      devPublish.disabled = false;
     } catch (error) {
       devPublish.disabled = false;
       devPublish.textContent = 'Try again';

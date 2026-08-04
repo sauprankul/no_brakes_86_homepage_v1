@@ -5,9 +5,16 @@ import test from 'node:test';
 import { devPublicationControlMarkup } from '../../scripts/dev-publish-view.mjs';
 
 test('local publishing controls render for unpublished article and list entries', () => {
-  assert.match(devPublicationControlMarkup({ id: 'article', published: false }, true), /data-dev-publish="article"/);
-  assert.match(devPublicationControlMarkup({ id: 'list-entry', published: false }, true), /data-dev-publish="list-entry"/);
-  assert.match(devPublicationControlMarkup({ id: 'published-entry', published: true }, true), /Unpublish locally/);
+  const article = devPublicationControlMarkup({ id: 'article', published: false }, true);
+  const list = devPublicationControlMarkup({ id: 'list-entry', published: false }, true);
+  const published = devPublicationControlMarkup({ id: 'published-entry', published: true }, true);
+  assert.match(article, /data-dev-publish="article"/);
+  assert.match(list, /data-dev-publish="list-entry"/);
+  assert.match(article, /role="switch" aria-checked="false"/);
+  assert.match(article, /Unpublished/);
+  assert.match(published, /role="switch" aria-checked="true"/);
+  assert.match(published, /Published/);
+  assert.doesNotMatch(article, /Local preview|Publish locally/);
   assert.equal(devPublicationControlMarkup({ id: 'production-entry', published: false }, false), '');
 });
 

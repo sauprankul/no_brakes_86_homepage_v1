@@ -16,8 +16,16 @@ test('omits an empty config subtitle', () => {
   assert.doesNotMatch(html, /article-header__subtitle/);
 });
 
-test('the article body has the only divider below the subtitle and local publish control', async () => {
+test('article and list headers have one post-subtitle divider and matching subtitle sizing', async () => {
   const stylesheet = await readFile(path.join(process.cwd(), 'styles.css'), 'utf8');
-  assert.match(stylesheet, /\.dev-publish \{[^}]*border: 0;/);
   assert.match(stylesheet, /\.article-layout \{[^}]*border-top: 1px solid var\(--line\)/);
+  assert.doesNotMatch(stylesheet, /\.page-header \{[^}]*border-bottom/);
+  assert.match(stylesheet, /\.page-header p:not\(\.eyebrow\) \{[^}]*font-size: clamp\(1\.12rem, 1\.8vw, 1\.38rem\)/);
+});
+
+test('the local publication toggle floats without taking document layout space', async () => {
+  const stylesheet = await readFile(path.join(process.cwd(), 'styles.css'), 'utf8');
+  assert.match(stylesheet, /\.dev-publish \{[^}]*position: fixed;[^}]*top: 92px;[^}]*right: clamp\(24px, 5vw, 66px\)/);
+  assert.match(stylesheet, /\.dev-publish__toggle\.is-unpublished \{[^}]*background: #9d2630/);
+  assert.match(stylesheet, /\.dev-publish__toggle\.is-published \{[^}]*background: #2f8f5b/);
 });

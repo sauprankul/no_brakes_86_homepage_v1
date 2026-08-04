@@ -27,6 +27,7 @@ The homepage must therefore provide equal visual weight to `New` and `Hot`, side
 - Desktop layouts must remain calm up to a 32:9 ultrawide viewport: cap reading lines and keep the page centered rather than stretching article prose.
 - Article page: a wide, readable main column and a short on-page navigation rail. The rail moves above content on mobile.
 - Category page: show the long category title, a category description, filters, then dense visual preview rows.
+- List-page subtitles use the same larger type scale as article subtitles. There is a single divider beneath the subtitle before the entry controls or preview list; never stack a header divider and collection divider together.
 - Each preview row needs type/date when available, long title, subtitle and right-aligned tag chips. A thumbnail is optional; when present, it must carry meaningful alt text in production. An unpublished preview uses the single red `Unpublished` status and must not repeat the same state as a separate `Draft` date label.
 - Markdown tables use a responsive horizontal-scroll container, a thin yellow outer border, thin gray cell dividers, centered cell content, generous cell padding, and a sunflower-yellow header with dark text.
 - Empty state is intentional. No fabricated “sample lap analysis” or invented mechanical conclusions are allowed.
@@ -37,6 +38,7 @@ The homepage must therefore provide equal visual weight to `New` and `Hot`, side
 - Keyboard: visible focus indicator, Skip to content link, `Ctrl/Cmd + K` opens search, Escape closes dialogs.
 - Motion must be understated and respect `prefers-reduced-motion` when production motion is added.
 - Hover is optional enhancement only; never conceal an action behind hover.
+- During local development only, the publication control is a compact, pinned top-right toggle that overlays the page without shifting its content. It is red and labeled `Unpublished` when off, green and labeled `Published` when on, and has no separate local-preview status label.
 - Breadcrumbs are absent on Home and otherwise show `Home` followed by the complete archive hierarchy. Do not repeat that hierarchy as a separate eyebrow above the page title.
 
 ## Content integrity requirement

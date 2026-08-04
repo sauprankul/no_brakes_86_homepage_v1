@@ -22,7 +22,7 @@
     "test:collection": "node scripts/run-collection-coverage.mjs",
     "benchmark:refresh": "node scripts/benchmark-content-refresh.mjs",
     "check": "node scripts/require-node-version.mjs && npm run media:validate && npm run validate:content && npm run lint && npm run lint:md && npm run typecheck && npm run test && npm run test:collection",
-    "build": "node scripts/require-node-version.mjs && npm run media:validate && node scripts/build-content-index.mjs && vite build",
+    "build": "node scripts/production-build.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {

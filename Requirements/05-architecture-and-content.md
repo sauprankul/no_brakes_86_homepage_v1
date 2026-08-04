@@ -14,6 +14,8 @@ The repository root must remain author-focused. `Content/`, `Documentation/`, `R
 
 ## Node authoring model
 
+The production build assembles generated media and the production-only content index in a temporary public-asset staging directory. It never mutates the draft-inclusive `public/` directory used by an active authoring preview, so local authoring and a production build can run at the same time without file locks or mixed draft assets.
+
 Everything is an entry in the archive. Every entry directory contains exactly one `config.yaml`; no `_node.yaml`, category-specific metadata file, or separate metadata convention is allowed. `article.md` is optional:
 
 - no `article.md`: render the entry title/subtitle and a preview list of direct children;
