@@ -3,7 +3,6 @@ dist/
 src/public/content-index.json
 src/public/media/
 src/public/downloads/
-**/Downloads/
 **/Media/
 coverage/
 .c8-collection-tmp/
