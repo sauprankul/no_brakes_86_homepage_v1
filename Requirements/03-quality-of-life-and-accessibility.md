@@ -6,6 +6,7 @@
 - A visible-on-focus skip link jumps past the fixed navigation to the main article.
 - The navigation’s expand/open links and Back action have descriptive labels and remain keyboard-accessible; the current path and selected entry remain clear. Search results announce updated counts in an `aria-live` region.
 - Support keyboard-only traversal of menus, filters, dialogs, image controls, video activation and downloadable files.
+- The missing-route countdown is understandable without color, exposes the requested path as text, and always includes an immediate Home link in addition to the timed redirect.
 - Informative images require author-supplied alt text. Decorative images use empty alt text. Do not put key instructions only in images or video.
 - Captions and transcript are mandatory for author-hosted audio/video; YouTube captions must be reviewed or replaced with an accurate transcript.
 - Honor browser zoom through 200% without horizontal page loss and use responsive reflow at 320 CSS px.

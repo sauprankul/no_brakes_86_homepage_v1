@@ -15,3 +15,7 @@ export function isWidescreen(viewportWidth, viewportHeight) {
 export function shouldDismissSidebar({ wide, clickedInsideSidebar, clickedToggle }) {
   return !wide && !clickedInsideSidebar && !clickedToggle;
 }
+
+export function shouldInterceptInternalLink({ href, download, modified }) {
+  return String(href ?? '').startsWith('/') && !download && !modified;
+}

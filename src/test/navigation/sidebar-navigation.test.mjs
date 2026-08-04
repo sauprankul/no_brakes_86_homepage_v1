@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { hierarchyPath, navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from '../../scripts/sidebar-navigation.mjs';
-import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar } from '../../scripts/navigation-policy.mjs';
+import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar, shouldInterceptInternalLink } from '../../scripts/navigation-policy.mjs';
 
 const categories = [{ id: 'race', short: '86 Challenge' }, { id: 'blog', short: 'Blog' }];
 const entries = [
@@ -48,4 +48,10 @@ test('widescreen navigation stays persistent and narrow navigation dismisses on 
   assert.equal(shouldDismissSidebar({ wide: false, clickedInsideSidebar: false, clickedToggle: false }), true);
   assert.equal(shouldDismissSidebar({ wide: true, clickedInsideSidebar: false, clickedToggle: false }), false);
   assert.equal(shouldDismissSidebar({ wide: false, clickedInsideSidebar: true, clickedToggle: false }), false);
+});
+
+test('download links bypass SPA routing while ordinary internal links stay client-routed', () => {
+  assert.equal(shouldInterceptInternalLink({ href: '/86-challenge', download: false, modified: false }), true);
+  assert.equal(shouldInterceptInternalLink({ href: '/86-challenge/downloads/data.csv', download: true, modified: false }), false);
+  assert.equal(shouldInterceptInternalLink({ href: '/86-challenge', download: false, modified: true }), false);
 });

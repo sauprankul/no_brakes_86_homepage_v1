@@ -3,11 +3,7 @@ import path from 'node:path';
 import YAML from 'yaml';
 import { contentRoot } from './project-paths.mjs';
 
-function losAngelesDate() {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
-  const date = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
-  return `${date.year}-${date.month}-${date.day}`;
-}
+const legacyDateTimestamp = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '') ? `${value}T00:00:00.000Z` : value;
 
 async function configFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -22,7 +18,7 @@ async function configFiles(directory) {
 export function togglePublication(config, timestamp = new Date().toISOString()) {
   const published = config.published !== true;
   const next = { ...config, published, updated_at: timestamp };
-  if (published && !next.published_at) next.published_at = losAngelesDate();
+  if (published) next.published_at = legacyDateTimestamp(next.published_at) || timestamp;
   return next;
 }
 

@@ -6,20 +6,17 @@ import { directCategoryChildren, rootCategoryId } from './content-hierarchy.mjs'
 import { contentPath } from './content-routes.mjs';
 import { visibleCategories, visibleEntries } from './content-index-visibility.mjs';
 import { generateSizedMedia, IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
-import { contentRoot, publicRoot } from './project-paths.mjs';
+import { contentRoot as defaultContentRoot, publicRoot } from './project-paths.mjs';
 
+const contentRoot = process.env.NO_BRAKES_CONTENT_DIR ? path.resolve(process.env.NO_BRAKES_CONTENT_DIR) : defaultContentRoot;
 const outputRoot = process.env.NO_BRAKES_PUBLIC_DIR ? path.resolve(process.env.NO_BRAKES_PUBLIC_DIR) : publicRoot;
 const outputFile = path.join(outputRoot, 'content-index.json');
 const isWatchMode = process.argv.includes('--watch');
 const includeDrafts = process.argv.includes('--include-drafts');
 const touchUpdates = process.argv.includes('--touch-updates');
 
-const today = () => {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
-  const value = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
-  return `${value.year}-${value.month}-${value.day}`;
-};
 const now = () => new Date().toISOString();
+const legacyDateTimestamp = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '') ? `${value}T00:00:00.000Z` : value;
 const sortableDate = (entry) => entry.date ?? entry.updatedAt ?? '';
 
 async function filesIn(directory) {
@@ -55,42 +52,36 @@ async function findThumbnail(directory, nodeId, configured) {
   return configured ?? '';
 }
 
-async function articleData(directory, nodeId) {
+async function articleData(directory, nodeId, entryPath) {
   const articleFile = path.join(directory, 'article.md');
   try {
     const markdown = await readFile(articleFile, 'utf8');
-    return { hasArticle: true, ...renderArticleMarkdown(markdown, nodeId) };
+    return { hasArticle: true, ...renderArticleMarkdown(markdown, nodeId, entryPath) };
   } catch {
-    return { hasArticle: false, html: '', headings: [] };
+    return { hasArticle: false, html: '', headings: [], searchSections: [] };
   }
 }
 
-async function copyDownloads(directory, nodeId) {
+async function copyDownloads(directory, entryPath) {
   const downloadsDirectory = path.join(directory, 'Downloads');
-  try {
-    const files = await filesIn(downloadsDirectory);
-    await Promise.all(files.map(async (file) => {
-      const destination = path.join(outputRoot, 'downloads', nodeId, path.relative(downloadsDirectory, file));
-      await mkdir(path.dirname(destination), { recursive: true });
-      await copyFile(file, destination);
-    }));
-  } catch {
-    // A Downloads folder is optional.
-  }
+  if (!await exists(downloadsDirectory)) return;
+  const files = await filesIn(downloadsDirectory);
+  await Promise.all(files.map(async (file) => {
+    const destination = path.join(outputRoot, entryPath.replace(/^\/+/, ''), 'downloads', path.relative(downloadsDirectory, file));
+    await mkdir(path.dirname(destination), { recursive: true });
+    await copyFile(file, destination);
+  }));
 }
 
 async function copySizedMedia(directory, nodeId) {
   const sizedDirectory = path.join(directory, 'SizedMedia');
-  try {
-    const files = await filesIn(sizedDirectory);
-    await Promise.all(files.filter((file) => path.basename(file) !== '.media-manifest.json').map(async (file) => {
-      const destination = path.join(outputRoot, 'media', nodeId, path.relative(sizedDirectory, file));
-      await mkdir(path.dirname(destination), { recursive: true });
-      await copyFile(file, destination);
-    }));
-  } catch {
-    // A node only needs SizedMedia when it references authored media.
-  }
+  if (!await exists(sizedDirectory)) return;
+  const files = await filesIn(sizedDirectory);
+  await Promise.all(files.filter((file) => path.basename(file) !== '.media-manifest.json').map(async (file) => {
+    const destination = path.join(outputRoot, 'media', nodeId, path.relative(sizedDirectory, file));
+    await mkdir(path.dirname(destination), { recursive: true });
+    await copyFile(file, destination);
+  }));
 }
 
 async function writeYaml(file, value) {
@@ -98,14 +89,15 @@ async function writeYaml(file, value) {
 }
 
 async function normaliseArticle(configFile, config) {
-  if (config.published !== true) return config;
   let changed = false;
-  const date = today();
-  if (!config.published_at) {
-    config.published_at = date;
+  if (legacyDateTimestamp(config.published_at) !== config.published_at) {
+    config.published_at = legacyDateTimestamp(config.published_at);
+    changed = true;
+  } else if (config.published === true && !config.published_at) {
+    config.published_at = now();
     changed = true;
   }
-  if (!config.updated_at) {
+  if (config.published === true && !config.updated_at) {
     config.updated_at = config.published_at;
     changed = true;
   }
@@ -125,15 +117,20 @@ async function build() {
       console.error(`Media resizing failed: ${error.message}`);
     }
   }
-  // Retries cover ordinary Windows file-system contention in the authoring output.
-  await rm(path.join(outputRoot, 'media'), { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  if (!isWatchMode) {
+    await Promise.all(['downloads', 'media'].map((directory) => rm(path.join(outputRoot, directory), { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })));
+  }
   const configs = (await filesIn(contentRoot)).filter((file) => path.basename(file) === 'config.yaml');
   const entries = await Promise.all(configs.map(async (file) => ({ file, config: await normaliseArticle(file, await readYaml(file)) })));
-  const nodes = await Promise.all(entries.map(async ({ file, config }) => {
+  const nodeShells = await Promise.all(entries.map(async ({ file, config }) => {
     const id = config.id ?? slugFrom(file);
     const directory = path.dirname(file);
-    return { file, config, id, parent: config.parent ?? null, thumbnail: await findThumbnail(directory, id, config.thumbnail), ...(await articleData(directory, id)), directory };
+    return { file, config, id, parent: config.parent ?? null, thumbnail: await findThumbnail(directory, id, config.thumbnail), directory };
   }));
+  const nodes = await Promise.all(nodeShells.map(async (node) => ({
+    ...node,
+    ...(await articleData(node.directory, node.id, contentPath(nodeShells, node))),
+  })));
   let categories = nodes
     .filter(({ parent }) => !parent)
     .sort((a, b) => (a.config.order ?? 999) - (b.config.order ?? 999))
@@ -160,9 +157,10 @@ async function build() {
       type: node.config.content_type ?? (node.hasArticle ? 'Article' : 'Index'),
       html: node.html,
       headings: node.headings,
+      searchSections: node.searchSections,
     }));
   const articles = visibleEntries(nodes, includeDrafts)
-    .map(({ config, id, parent, thumbnail, hasArticle, html, headings }) => ({
+    .map(({ config, id, parent, thumbnail, hasArticle, html, headings, searchSections }) => ({
       id,
       path: contentPath(nodes, { config, id, parent }),
       category: rootCategoryId(nodes, { id, parent }),
@@ -180,6 +178,7 @@ async function build() {
       type: config.content_type ?? (hasArticle ? 'Article' : 'Index'),
       html,
       headings,
+      searchSections,
       published: config.published === true,
     }))
     .sort((a, b) => sortableDate(b).localeCompare(sortableDate(a)));
@@ -192,7 +191,7 @@ async function build() {
   }
   categories = visibleCategories(categories, includeDrafts);
   await Promise.all(nodes.filter((node) => includeDrafts || node.config.published === true).map(async (node) => {
-    await copyDownloads(node.directory, node.id);
+    await copyDownloads(node.directory, contentPath(nodes, node));
     await copySizedMedia(node.directory, node.id);
   }));
   await mkdir(path.dirname(outputFile), { recursive: true });

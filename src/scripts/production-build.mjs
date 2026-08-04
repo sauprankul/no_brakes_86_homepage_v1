@@ -33,6 +33,7 @@ try {
   await run(process.execPath, ['scripts/validate-sized-media.mjs']);
   await run(process.execPath, ['scripts/build-content-index.mjs'], productionEnvironment);
   await run(process.execPath, ['node_modules/vite/bin/vite.js', 'build'], productionEnvironment);
+  await run(process.execPath, ['scripts/build-pagefind.mjs'], productionEnvironment);
 } finally {
   await rm(productionPublicRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 }

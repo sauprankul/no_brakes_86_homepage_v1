@@ -6,14 +6,19 @@ import test from 'node:test';
 import YAML from 'yaml';
 import { togglePublication, togglePublishedEntry } from '../../scripts/dev-publish.mjs';
 
-test('publishing writes an immutable first publish date and an updated timestamp', () => {
+test('publishing writes an immutable first publish timestamp and an updated timestamp', () => {
   const first = togglePublication({ id: 'entry', published: false, published_at: null }, '2026-08-03T18:20:00.000Z');
   assert.equal(first.published, true);
-  assert.match(first.published_at, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(first.published_at, '2026-08-03T18:20:00.000Z');
   assert.equal(first.updated_at, '2026-08-03T18:20:00.000Z');
   const removed = togglePublication(first, '2026-08-04T18:20:00.000Z');
   assert.equal(removed.published, false);
   assert.equal(removed.published_at, first.published_at);
+});
+
+test('a legacy date-only publication value is preserved as an explicit midnight timestamp', () => {
+  const published = togglePublication({ id: 'legacy', published: false, published_at: '2026-08-03' }, '2026-08-04T18:20:00.000Z');
+  assert.equal(published.published_at, '2026-08-03T00:00:00.000Z');
 });
 
 test('the local dev publisher changes only the matching config file', async () => {

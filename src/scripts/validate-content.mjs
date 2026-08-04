@@ -1,14 +1,15 @@
 import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
-import { configuredThumbnailError } from './content-validation-rules.mjs';
+import { configuredThumbnailError, publishedDescriptionError, validTags } from './content-validation-rules.mjs';
 import { IMAGE_EXTENSIONS, mediaTypeFor, sizedMediaRelativePath } from './media-pipeline.mjs';
 import { contentRoot, repositoryRelative } from './project-paths.mjs';
 
 const errors = [];
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
-const isDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '') && !Number.isNaN(Date.parse(`${value}T12:00:00Z`));
-const isTimestamp = (value) => isDate(value) || (typeof value === 'string' && !Number.isNaN(Date.parse(value)));
+const isTimestamp = (value) => typeof value === 'string'
+  && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)
+  && !Number.isNaN(Date.parse(value));
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 async function filesIn(directory) {
@@ -56,16 +57,19 @@ for (const node of nodes) {
   const { config, file, dir } = node;
   const label = repositoryRelative(file);
   if (config.parent && !nodeById.has(config.parent)) errors.push(`${label}: parent "${config.parent}" does not exist.`);
+  if (config.published_at != null && !isTimestamp(config.published_at)) errors.push(`${label}: published_at must be an ISO 8601 timestamp when present.`);
+  if (config.updated_at != null && !isTimestamp(config.updated_at)) errors.push(`${label}: updated_at must be an ISO 8601 timestamp when present.`);
   if (config.published !== true) continue;
   const thumbnail = await thumbnailFor(dir, config.thumbnail);
 
-  if (!isNonEmptyString(config.subtitle)) errors.push(`${label}: published nodes need a non-empty subtitle.`);
+  const descriptionError = publishedDescriptionError({ hasArticle: await exists(path.join(dir, 'article.md')), subtitle: config.subtitle, description: config.description });
+  if (descriptionError) errors.push(`${label}: ${descriptionError}`);
   const thumbnailError = configuredThumbnailError(config.thumbnail, thumbnail);
   if (thumbnailError) errors.push(`${label}: ${thumbnailError}`);
-  if (!isDate(config.published_at)) errors.push(`${label}: published_at must be YYYY-MM-DD for a published node.`);
-  if (!isTimestamp(config.updated_at)) errors.push(`${label}: updated_at must be an ISO date or timestamp for a published node.`);
-  if (isDate(config.published_at) && isTimestamp(config.updated_at) && config.updated_at.slice(0, 10) < config.published_at) errors.push(`${label}: updated_at cannot be before published_at.`);
-  if (!Array.isArray(config.tags) || config.tags.some((tag) => !isNonEmptyString(tag))) errors.push(`${label}: tags must be an array of non-empty strings.`);
+  if (config.published_at == null) errors.push(`${label}: published_at is required for a published node.`);
+  if (config.updated_at == null) errors.push(`${label}: updated_at is required for a published node.`);
+  if (isTimestamp(config.published_at) && isTimestamp(config.updated_at) && Date.parse(config.updated_at) < Date.parse(config.published_at)) errors.push(`${label}: updated_at cannot be before published_at.`);
+  if (!validTags(config.tags)) errors.push(`${label}: tags must be an array of non-empty strings or finite numbers.`);
   if (isNonEmptyString(thumbnail) && !/^(https?:\/\/|\/|\.\/SizedMedia\/)/.test(thumbnail)) {
     const thumbnailFile = path.resolve(dir, thumbnail);
     if (!await exists(thumbnailFile)) errors.push(`${label}: thumbnail "${thumbnail}" does not exist.`);

@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 import { publishedMarkdownFiles } from './published-markdown-files.mjs';
-import { contentRoot } from './project-paths.mjs';
+import { appRoot, contentRoot } from './project-paths.mjs';
 
 const files = await publishedMarkdownFiles(contentRoot);
 if (!files.length) {
@@ -8,6 +9,7 @@ if (!files.length) {
   process.exit(0);
 }
 
-const command = process.platform === 'win32' ? 'markdownlint-cli2.cmd' : 'markdownlint-cli2';
-const result = spawnSync(command, files, { stdio: 'inherit', shell: false });
+const cli = path.join(appRoot, 'node_modules', 'markdownlint-cli2', 'markdownlint-cli2-bin.mjs');
+const result = spawnSync(process.execPath, [cli, '--no-globs', ...files], { stdio: 'inherit', shell: false });
+if (result.error) console.error(`Could not launch Markdown lint: ${result.error.message}`);
 process.exitCode = result.status ?? 1;

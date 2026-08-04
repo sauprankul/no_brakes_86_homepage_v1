@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
+import { updateDevIndexPublication } from './scripts/dev-content-index.mjs';
 import { togglePublishedEntry } from './scripts/dev-publish.mjs';
 
 async function readJson(request) {
@@ -40,6 +41,7 @@ export default defineConfig({
           const { id } = await readJson(request);
           if (typeof id !== 'string' || !id) throw new Error('A valid entry id is required.');
           const entry = await togglePublishedEntry(id);
+          await updateDevIndexPublication(contentIndex, entry);
           response.setHeader('Content-Type', 'application/json');
           response.end(JSON.stringify({ entry }));
         } catch (error) {

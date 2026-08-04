@@ -5,8 +5,11 @@ import { selectContentIndex } from './scripts/content-index-client.mjs';
 import { entryRoutePath, normalizeRoutePath, resolveContentRoute } from './scripts/content-routes.mjs';
 import { devPublicationControlMarkup } from './scripts/dev-publish-view.mjs';
 import { hierarchyPath, navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
-import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar } from './scripts/navigation-policy.mjs';
+import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar, shouldInterceptInternalLink } from './scripts/navigation-policy.mjs';
+import { notFoundMarkup } from './scripts/not-found-view.mjs';
 import { previewPublicationBadge, previewPublicationDate } from './scripts/preview-status.mjs';
+import { searchPagefindEntryIds } from './scripts/pagefind-client.mjs';
+import { rankFullSearchResults, rankMetadataResults } from './scripts/search-ranking.mjs';
 
 if (import.meta.env.DEV) installClientLogBridge({
   consoleObject: console,
@@ -84,12 +87,12 @@ const globalInput = document.querySelector('#global-search-input');
 const globalSuggestions = document.querySelector('#global-search-suggestions');
 
 const state = { route: 'home', category: null, article: null, treeRoot: null, treeFocus: null };
-const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 function categoryById(id) { return categories.find((item) => item.id === id); }
 function articleById(id) { return articles.find((item) => item.id === id); }
-function datePart(value) { return String(value ?? '').slice(0, 10); }
-function formatDate(date) { return dateFormatter.format(new Date(datePart(date) === date ? `${date}T12:00:00Z` : date)); }
+function sameTimestamp(left, right) { return left && right && Date.parse(left) === Date.parse(right); }
+function formatDate(date) { return dateFormatter.format(new Date(date)); }
 function esc(value) { return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character])); }
 
 function syncSidebarLayout() {
@@ -110,7 +113,7 @@ function tags(tags) { return `<div class="tags">${tags.map((tag) => `<span class
 function articleRow(article, expanded = false) {
   const dateLabel = previewPublicationDate(article, formatDate);
   const publicationDate = dateLabel ? `<span>${dateLabel}</span>` : '';
-  const updated = article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated ${formatDate(article.updatedAt)}</span>` : '';
+  const updated = article.updatedAt && !sameTimestamp(article.updatedAt, article.date) ? `<span>Updated ${formatDate(article.updatedAt)}</span>` : '';
   const publication = previewPublicationBadge(article);
   return `
     <article class="article-row article-row--clickable" data-article="${article.id}" tabindex="0" aria-label="Open ${esc(article.title)}">
@@ -343,7 +346,7 @@ function renderArticle(id) {
   const hasChildren = directChildren(article.id).length > 0;
   const toc = article.headings?.length ? `<aside class="article-aside"><h2>On this page</h2><ul>${article.headings.map((heading) => `<li class="article-aside__level-${heading.depth}"><a href="#${esc(heading.id)}">${esc(heading.text)}</a></li>`).join('')}</ul></aside>` : '';
   setBreadcrumb(breadcrumbParts(article.id));
-  const details = `${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}`;
+  const details = `${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && !sameTimestamp(article.updatedAt, article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}`;
   const devPublishControl = devPublicationControlMarkup(article, import.meta.env.DEV);
   main.innerHTML = `
     ${articleHeaderMarkup(article, details)}
@@ -373,13 +376,37 @@ function renderAbout() {
   renderTree();
 }
 
+let notFoundTimer;
+function renderNotFound() {
+  state.category = null;
+  state.article = null;
+  state.treeRoot = null;
+  state.treeFocus = null;
+  setBreadcrumb([{ label: 'Home', href: '/' }, { label: '404' }]);
+  let seconds = 5;
+  main.innerHTML = notFoundMarkup(window.location.pathname, seconds);
+  renderTree();
+  notFoundTimer = window.setInterval(() => {
+    seconds -= 1;
+    if (seconds <= 0) {
+      window.clearInterval(notFoundTimer);
+      navigateTo('/', { replace: true });
+      return;
+    }
+    const countdown = document.querySelector('[data-not-found-countdown]');
+    if (countdown) countdown.textContent = String(seconds);
+  }, 1000);
+}
+
 function route(resetScroll = true) {
+  window.clearInterval(notFoundTimer);
   if (dialog.open) dialog.close();
   const target = resolveContentRoute(categories, articles, window.location.pathname);
   if (target.type === 'list') renderListPage(target.entry.id);
   else if (target.type === 'article') renderArticle(target.entry.id);
   else if (target.type === 'about') renderAbout();
-  else renderHome();
+  else if (target.type === 'home') renderHome();
+  else renderNotFound();
   if (resetScroll) window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
@@ -403,16 +430,22 @@ function migrateLegacyHashRoute() {
 }
 
 function searchableEntries(query) {
-  const term = query.trim().toLowerCase();
-  return term ? articles.filter((article) => [article.title, article.subtitle, article.type, categoryById(article.category)?.name ?? '', ...article.tags].join(' ').toLowerCase().includes(term)) : [];
+  return rankMetadataResults(articles, (article) => categoryById(article.category)?.name ?? '', query).map(({ entry }) => entry);
 }
 
-function search(query) {
-  const term = query.trim().toLowerCase();
-  const matches = searchableEntries(query);
-  dialogResults.innerHTML = term
-    ? (matches.length ? matches.map((article) => `<div class="dialog-result"><button type="button" data-search-result="${article.id}">${thumb(article)}<span class="result-meta">${esc(categoryById(article.category)?.short ?? 'Archive')} · ${article.date ? formatDate(article.date) : 'Draft'}</span><strong>${esc(article.title)}</strong><p>${esc(article.subtitle)}</p></button></div>`).join('') : '<div class="empty-state"><strong>No result yet.</strong>Try a track, part, technique or repair.</div>')
-    : '<div class="empty-state"><strong>Search the archive.</strong>Results will include titles, subtitles, categories and tags.</div>';
+let searchRequest = 0;
+async function search(query) {
+  const request = ++searchRequest;
+  const term = query.trim();
+  if (!term) {
+    dialogResults.innerHTML = '<div class="empty-state"><strong>Search the archive.</strong>Results will include titles, subtitles, categories, tags and article text.</div>';
+    return;
+  }
+  dialogResults.innerHTML = '<div class="empty-state"><strong>Searching…</strong></div>';
+  const pagefindIds = import.meta.env.DEV ? null : await searchPagefindEntryIds(term);
+  if (request !== searchRequest) return;
+  const matches = rankFullSearchResults(articles, (article) => categoryById(article.category)?.name ?? '', term, pagefindIds);
+  dialogResults.innerHTML = matches.length ? matches.map(({ entry, bodyContext: context }) => `<div class="dialog-result"><button type="button" data-search-result="${entry.id}">${thumb(entry)}<span class="result-meta">${esc(categoryById(entry.category)?.short ?? 'Archive')} · ${entry.date ? formatDate(entry.date) : 'Unpublished'}</span><strong>${esc(entry.title)}</strong><p>${esc(context?.text ?? entry.subtitle)}</p></button></div>`).join('') : '<div class="empty-state"><strong>No result yet.</strong>Try a track, part, technique or repair.</div>';
 }
 
 let suggestionTimer;
@@ -507,7 +540,11 @@ document.addEventListener('click', async (event) => {
     if (article) { globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); navigateTo(entryHref(article)); }
   }
   if (scrollTarget) { document.querySelector(scrollTarget.dataset.scroll)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-  if (internalLink && !event.defaultPrevented && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+  if (internalLink && !event.defaultPrevented && shouldInterceptInternalLink({
+    href: internalLink.getAttribute('href'),
+    download: internalLink.hasAttribute('download'),
+    modified: event.ctrlKey || event.metaKey || event.shiftKey || event.altKey,
+  })) {
     event.preventDefault();
     navigateTo(internalLink.getAttribute('href'));
   }
