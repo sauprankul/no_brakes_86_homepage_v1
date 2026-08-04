@@ -12,6 +12,8 @@ npm run dev
 
 Open the localhost address printed by Vite on the second monitor. Save a `Content/**/article.md` file and the preview will refresh. See [Content/README.md](Content/README.md).
 
+Use Node.js 22.12.0 or newer (the project pins it in `.nvmrc`). In VS Code, task labels appear under `Ctrl+Shift+P` → **Tasks: Run Task** after opening the `homepage_v1` folder itself.
+
 ## What this prototype establishes
 
 - Dark, graphite and sunflower-yellow visual system.

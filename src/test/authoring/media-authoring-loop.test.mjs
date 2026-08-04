@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import test from 'node:test';
+
+test('authoring and pre-commit regenerate media when it is missing or stale', async () => {
+  const sourceRoot = process.cwd();
+  const builder = await readFile(path.join(sourceRoot, 'scripts', 'build-content-index.mjs'), 'utf8');
+  const productionBuild = await readFile(path.join(sourceRoot, 'scripts', 'production-build.mjs'), 'utf8');
+  const contentWatch = await readFile(path.join(sourceRoot, 'scripts', 'content-watch.mjs'), 'utf8');
+  const hook = await readFile(path.join(sourceRoot, '..', '.githooks', 'pre-commit'), 'utf8');
+  assert.match(builder, /generateSizedMedia\(contentRoot\)/);
+  assert.match(builder, /build\(\{ prepareMedia: isWatchMode && includeDrafts \}\)/);
+  assert.match(builder, /changes\.some\(\(change\) => change\.kind === 'media'\)/);
+  assert.match(builder, /Content changes detected; rebuilding/);
+  assert.match(contentWatch, /lower\.includes\('sizedmedia'\)/);
+  assert.match(builder, /maxRetries: 10, retryDelay: 100/);
+  assert.match(builder, /NO_BRAKES_PUBLIC_DIR/);
+  assert.match(productionBuild, /NO_BRAKES_PUBLIC_DIR: productionPublicRoot/);
+  assert.match(hook, /generate-sized-media\.mjs --stage/);
+  assert.match(await readFile(path.join(sourceRoot, 'scripts', 'media-pipeline.mjs'), 'utf8'), /convertHeifFallback\(source, destination, error\)/);
+});

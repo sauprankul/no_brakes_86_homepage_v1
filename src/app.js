@@ -1,10 +1,32 @@
-import { filterCollection, filtersAreActive } from './scripts/collection-filter.mjs';
+import { filterCollection, filtersAreActive, tagOptions, tagSuggestions } from './scripts/collection-filter.mjs';
 import { articleHeaderMarkup } from './scripts/article-view.mjs';
+import { installClientLogBridge } from './scripts/client-log-bridge.mjs';
+import { selectContentIndex } from './scripts/content-index-client.mjs';
+import { entryRoutePath, normalizeRoutePath, resolveContentRoute } from './scripts/content-routes.mjs';
+import { devPublicationControlMarkup } from './scripts/dev-publish-view.mjs';
+import { hierarchyPath, navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
+import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar, shouldInterceptInternalLink } from './scripts/navigation-policy.mjs';
+import { notFoundMarkup } from './scripts/not-found-view.mjs';
+import { previewPublicationBadge, previewPublicationDate } from './scripts/preview-status.mjs';
+import { searchPagefindEntryIds } from './scripts/pagefind-client.mjs';
+import { rankFullSearchResults } from './scripts/search-ranking.mjs';
+import { highlightedSearchText } from './scripts/search-view.mjs';
+
+if (import.meta.env.DEV) installClientLogBridge({
+  consoleObject: console,
+  windowObject: window,
+  send: (record) => fetch('/__dev/client-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+    keepalive: true,
+  }),
+});
 
 /*
   Prototype content deliberately contains navigation metadata and the requester's
   example titles only. Article copy is intentionally left as an author-owned prompt.
-*/
+
 const fallbackCategories = [
   { id: 'blog', name: 'Blog', short: 'Blog', count: 4, intro: 'Random musings about cars, tracks and the work around them.', children: ['ca-tire-efficiency-regulation', 'dailying-200tw-tires', 'why-go-to-the-track', 'before-buying-an-86-brz'] },
   { id: 'engine-rebuild', name: 'Engine Rebuild', short: 'Engine Rebuild', count: 3, intro: 'A start-to-finish record of the engine rebuild. Each entry can hold the episode, the supporting evidence, parts, photos and data.', children: ['gr86-engine-blew', 'why-engine-blew', 'long-block-install'] },
@@ -48,10 +70,12 @@ const fallbackArticles = [
   { id: 'obd-analyzer', category: 'tools', title: 'OBD2 Data Analyzer', subtitle: 'Add a clear workflow from raw logging to a useful conclusion.', date: '2026-03-09', tags: ['tools', 'data', 'obd2'], media: 'TOOL', featured: 'hot', type: 'Tool' },
 ];
 
-// `npm run dev` regenerates /content-index.json from the author-owned Content folder.
-// The hard-coded set remains only as a visual fallback while every starter node is a draft.
-let categories = fallbackCategories;
-let articles = fallbackArticles;
+*/
+// A static site always renders from the generated content index. An empty index is
+// the correct public result when every entry is a draft.
+const initialContent = selectContentIndex(null);
+let categories = initialContent.categories;
+let articles = initialContent.articles;
 
 const app = document.querySelector('#app-shell');
 const main = document.querySelector('#main-content');
@@ -63,31 +87,41 @@ const dialogResults = document.querySelector('#dialog-results');
 const globalInput = document.querySelector('#global-search-input');
 const globalSuggestions = document.querySelector('#global-search-suggestions');
 
-const state = { route: 'home', category: null, article: null };
-const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const state = { route: 'home', category: null, article: null, treeRoot: null, treeFocus: null };
+const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 function categoryById(id) { return categories.find((item) => item.id === id); }
 function articleById(id) { return articles.find((item) => item.id === id); }
-function datePart(value) { return String(value ?? '').slice(0, 10); }
-function formatDate(date) { return dateFormatter.format(new Date(datePart(date) === date ? `${date}T12:00:00Z` : date)); }
+function sameTimestamp(left, right) { return left && right && Date.parse(left) === Date.parse(right); }
+function formatDate(date) { return dateFormatter.format(new Date(date)); }
 function esc(value) { return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character])); }
+
+function syncSidebarLayout() {
+  const wide = isWidescreen(window.innerWidth, window.innerHeight);
+  app.classList.toggle('sidebar-collapsible', !wide);
+  if (wide) app.classList.remove('sidebar-open');
+}
+
+syncSidebarLayout();
 
 function thumb(article) {
   if (article.thumbnail) return `<div class="thumb thumb--image"><img src="${esc(article.thumbnail)}" alt="" loading="lazy" decoding="async" /></div>`;
   return `<div class="thumb" aria-hidden="true"><span class="thumb__label">${esc(article.media)}</span><span class="thumb__line thumb__line--one"></span><span class="thumb__line thumb__line--two"></span><span class="thumb__corner"></span></div>`;
 }
 
-function tags(tags) { return `<div class="tags">${tags.map((tag) => `<span class="tag">${esc(tag)}</span>`).join('')}</div>`; }
+function tags(tags) { return `<span class="tags">${tags.map((tag) => `<span class="tag">${esc(tag)}</span>`).join('')}</span>`; }
 
 function articleRow(article, expanded = false) {
-  const dateLabel = article.date ? formatDate(article.date) : 'Draft';
-  const updated = article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated ${formatDate(article.updatedAt)}</span>` : '';
+  const dateLabel = previewPublicationDate(article, formatDate);
+  const publicationDate = dateLabel ? `<span>${dateLabel}</span>` : '';
+  const updated = article.updatedAt && !sameTimestamp(article.updatedAt, article.date) ? `<span>Updated ${formatDate(article.updatedAt)}</span>` : '';
+  const publication = previewPublicationBadge(article);
   return `
     <article class="article-row article-row--clickable" data-article="${article.id}" tabindex="0" aria-label="Open ${esc(article.title)}">
       ${thumb(article)}
       <div class="article-row__body">
-        <p class="article-row__meta"><span>${esc(article.type)}</span><span>${dateLabel}</span>${updated}</p>
-        <a class="article-row__title" href="#article/${article.id}" data-article="${article.id}">${esc(article.title)}</a>
+        <p class="article-row__meta"><span>${esc(article.type)}</span>${publication}${publicationDate}${updated}</p>
+        <a class="article-row__title" href="${esc(entryHref(article))}" data-article="${article.id}">${esc(article.title)}</a>
         <p class="article-row__summary">${esc(article.subtitle)}</p>
         ${tags(expanded ? article.tags : article.tags.slice(0, 3))}
       </div>
@@ -113,40 +147,54 @@ function descendantEntries(id) {
   return found;
 }
 
-function nodePathIncludes(id) {
-  let current = state.article || state.category;
-  while (current) {
-    if (current === id) return true;
-    const node = articleById(current);
-    current = node?.parent || (node ? node.category : null);
-  }
-  return false;
+function syncTreeToCurrentEntry() {
+  const currentId = state.article || state.category;
+  const rootId = currentId && (categoryById(currentId) ? currentId : rootIdForEntry(articles, currentId));
+  if (!rootId) return;
+  state.treeRoot = rootId;
+  state.treeFocus = currentId && !categoryById(currentId) ? parentFocus(articles, rootId, currentId) : null;
 }
 
-function renderTreeItems(parentId, depth = 0) {
-  return directChildren(parentId).map((node) => {
-    const children = directChildren(node.id);
-    const open = nodePathIncludes(node.id);
-    const href = node.hasArticle === false ? `#category/${node.id}` : `#article/${node.id}`;
-    return `<div class="tree__node" style="--tree-depth:${depth}"><a class="tree__article ${nodePathIncludes(node.id) ? 'is-active' : ''}" href="${href}">${esc(node.title)}</a>${children.length ? `<div class="tree__items" ${open ? '' : 'hidden'}>${renderTreeItems(node.id, depth + 1)}</div>` : ''}</div>`;
-  }).join('');
+function entryHref(entry) {
+  return entryRoutePath(categories, articles, entry);
 }
 
 function renderTree() {
   navTree.innerHTML = categories.map((category) => {
-    const children = renderTreeItems(category.id);
-    const open = nodePathIncludes(category.id);
+    const open = state.treeRoot === category.id;
+    const context = open ? sidebarContext({ categories, entries: articles, rootId: category.id, focusId: state.treeFocus }) : null;
+    const contextEntry = context?.focus;
+    const contextHref = contextEntry ? entryHref(contextEntry) : entryHref(category);
+    const label = category.short;
+    const children = context?.children ?? [];
+    const limited = navigationChildren(children);
+    const contextRows = (context?.path ?? []).map((entry, index) => {
+      const active = state.article === entry.id || state.category === entry.id;
+      const count = directChildren(entry.id).length;
+      return `<a class="${navigationEntryClasses(entry, { active, baseClass: 'tree__context', previewMode: import.meta.env.DEV })}" data-tree-context="${entry.id}" data-tree-root="${category.id}" href="${entryHref(entry)}" style="--tree-depth:${index + 1}" ${active ? 'aria-current="page"' : ''}><span class="tree__folder" aria-hidden="true">□</span><span class="tree__label">${esc(entry.title)}</span><span class="tree__count">${count}</span></a>`;
+    }).join('');
+    const entries = limited.visible.map((entry) => {
+      const active = state.article === entry.id || state.category === entry.id;
+      return `<a class="${navigationEntryClasses(entry, { active, previewMode: import.meta.env.DEV })}" data-tree-entry="${entry.id}" href="${entryHref(entry)}" ${active ? 'aria-current="page"' : ''}>${esc(entry.title)}</a>`;
+    }).join('');
+    const back = contextEntry ? `<button class="tree__back" type="button" data-tree-back="${category.id}">^ Collapse</button>` : '';
+    const seeAll = limited.hasMore ? `<a class="tree__see-all" href="${contextHref}">See all ${children.length} entries →</a>` : '';
     return `
       <section class="tree__section">
-        <div class="tree__category-row">
-          <button class="tree__collapse" type="button" data-tree-category="${category.id}" aria-label="Toggle ${esc(category.short)}" aria-expanded="${open}"><span class="tree__caret" aria-hidden="true">⌄</span></button>
-          <a class="tree__category ${state.category === category.id ? 'is-active' : ''}" href="#category/${category.id}" ${state.category === category.id ? 'aria-current="page"' : ''}>
-            <span class="tree__folder" aria-hidden="true">□</span><span>${esc(category.short)}</span><span class="tree__count">${category.count}</span>
-          </a>
-        </div>
-        <div class="tree__items" ${open ? '' : 'hidden'}>${children}</div>
+        <a class="${navigationEntryClasses(category, { active: state.category === category.id, baseClass: 'tree__category', previewMode: import.meta.env.DEV })}" data-tree-context="${category.id}" data-tree-root="${category.id}" href="${esc(entryHref(category))}" ${state.category === category.id ? 'aria-current="page"' : ''}>
+          <span class="tree__folder" aria-hidden="true">□</span><span class="tree__label">${esc(label)}</span><span class="tree__count">${category.count}</span>
+        </a>
+        <div class="tree__items" ${open ? '' : 'hidden'}>${contextRows}${back}${entries}${seeAll}</div>
       </section>`;
   }).join('');
+}
+
+function breadcrumbParts(id) {
+  const path = hierarchyPath(categories, articles, id);
+  return [{ label: 'Home', href: '/' }, ...path.map((entry, index) => {
+    const final = index === path.length - 1;
+    return { label: entry.name ?? entry.title, href: final ? undefined : entryHref(entry) };
+  })];
 }
 
 function setBreadcrumb(parts) {
@@ -161,17 +209,19 @@ function renderHome() {
   const hotItems = articles.filter((article) => article.featured === 'hot').slice(0, 5);
   state.category = null;
   state.article = null;
-  setBreadcrumb([{ label: 'Archive' }, { label: 'Home' }]);
+  state.treeRoot = null;
+  state.treeFocus = null;
+  setBreadcrumb([]);
   main.innerHTML = `
     <section class="hero">
       <div>
-        <p class="eyebrow">86 / BRZ PERFORMANCE REFERENCE</p>
-        <h1>Every lap, repair<br />and bad idea—<em>kept useful.</em></h1>
+        <p class="eyebrow">Let my Ls be your Ws</p>
+        <h1>Everything I know about the Toyobaru platform and NorCal tracks <em>distilled</em></h1>
         <div class="hero__rule"></div>
       </div>
       <div>
         <p class="hero__copy">A searchable, long-form record for the work behind 86 Challenge. Video lives on YouTube; the evidence, context and notes live here.</p>
-        <div class="hero__note"><strong>${articles.length}</strong><span>starter entries in the archive prototype</span></div>
+        <div class="hero__note"><strong>${articles.length}</strong><span>${import.meta.env.DEV ? 'entries in local preview' : 'published entries'}</span></div>
       </div>
     </section>
 
@@ -195,22 +245,37 @@ function renderHome() {
   renderTree();
 }
 
-function getTagOptions(items) {
-  return [...new Set(items.flatMap((article) => article.tags))].sort((a, b) => a.localeCompare(b));
+function tagTableMarkup(kind, label) {
+  return `<section class="tag-filter" data-tag-filter="${kind}" aria-label="${label}">
+    <span class="filter-label">${label}</span>
+    <div class="tag-filter__table" data-tag-rows="${kind}"></div>
+    <div class="tag-options" data-tag-options="${kind}" hidden></div>
+  </section>`;
+}
+
+function filterPanelMarkup() {
+  return `<div class="filter-panel" data-filter-panel>
+    <div class="filter-primary">
+      <label class="filter-search"><span>Search</span><input data-filter="text" type="search" placeholder="Search title, subtitle or tags…" /></label>
+      <div class="filter-row">
+        <label><span>Published before</span><input data-filter="before" type="date" /></label>
+        <label><span>Published after</span><input data-filter="after" type="date" /></label>
+        <label><span>Order</span><select data-filter="order"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="title">Title A–Z</option></select></label>
+        <label><span>Articles only?</span><select data-filter="articles-only"><option value="">Any</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+      </div>
+    </div>
+    <div class="tag-tables">${tagTableMarkup('include', 'Include tags')}${tagTableMarkup('exclude', 'Exclude tags')}</div>
+  </div>`;
 }
 
 function collectionMarkup(id, articleMode) {
   const placement = articleMode ? 'collection-controls--article' : 'collection-controls--index';
   return `<section class="collection-controls ${placement}" id="collection-${id}" aria-label="Search entries below this page">
-    <div class="filters">
-      <label><span>Search</span><input data-filter="text" type="search" placeholder="Search title, subtitle or tags…" /></label>
-      <label><span>Articles only?</span><select data-filter="articles-only"><option value="">Any</option><option value="yes">Yes</option><option value="no">No</option></select></label>
-      <label class="tag-filter"><span>Include tags</span><div class="tag-filter__box" data-tag-box="include"><div class="tag-chips" data-tag-chips="include"></div><input data-tag-input="include" type="search" autocomplete="off" placeholder="Type a tag" /></div><div class="tag-options" data-tag-options="include" hidden></div></label>
-      <label class="tag-filter"><span>Exclude tags</span><div class="tag-filter__box" data-tag-box="exclude"><div class="tag-chips" data-tag-chips="exclude"></div><input data-tag-input="exclude" type="search" autocomplete="off" placeholder="Type a tag" /></div><div class="tag-options" data-tag-options="exclude" hidden></div></label>
-      <label><span>Published after</span><input data-filter="after" type="date" /></label>
-      <label><span>Published before</span><input data-filter="before" type="date" /></label>
-      <label><span>Order</span><select data-filter="order"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="title">Title A–Z</option></select></label>
-    </div>
+    <button class="mobile-filter-open" type="button" data-mobile-filter-open>Search / Filter / Sort</button>
+    <div class="filter-panel-host" data-filter-panel-host>${filterPanelMarkup()}</div>
+    <dialog class="collection-filter-dialog" data-filter-dialog aria-label="Search, filter and sort entries">
+      <div class="collection-filter-dialog__surface" data-filter-dialog-surface><div data-filter-dialog-mount></div><div class="collection-filter-dialog__actions"><button class="filter-cancel" type="button" data-filter-cancel>Cancel</button><button class="filter-apply" type="button" data-filter-apply>Apply</button></div></div>
+    </dialog>
     <div class="collection-status"><p class="collection-hint" data-collection-hint ${articleMode ? '' : 'hidden'}>Search for something under this article.</p><button class="clear-filters" type="button" data-clear-filters hidden>Clear filters</button></div>
     <p class="filter-count" data-filter-count ${articleMode ? 'hidden' : ''}></p>
   </section>`;
@@ -221,22 +286,25 @@ function mountCollection(id, articleMode) {
   const results = document.querySelector('#category-results');
   const direct = directChildren(id);
   const all = descendantEntries(id);
-  const tagsAvailable = getTagOptions(all);
+  const tagsAvailable = tagOptions(all);
   const selected = { include: [], exclude: [] };
   const input = (name) => root.querySelector(`[data-filter="${name}"]`);
-  const paintChips = (kind) => {
-    root.querySelector(`[data-tag-chips="${kind}"]`).innerHTML = selected[kind].map((tag) => `<span class="tag-chip">${esc(tag)}<button type="button" data-remove-tag="${kind}" data-tag="${esc(tag)}" aria-label="Remove ${esc(tag)}">×</button></span>`).join('');
+  const paintTagRows = (kind) => {
+    const rows = selected[kind].map((tag) => `<div class="tag-slot tag-slot--selected"><span>${esc(tag.toLowerCase())}</span><button type="button" data-remove-tag="${kind}" data-tag="${esc(tag)}" aria-label="Remove ${esc(tag)}">×</button></div>`);
+    while (rows.length < 5) rows.push(`<div class="tag-slot tag-slot--empty"><input data-tag-input="${kind}" type="search" autocomplete="off" aria-label="Add ${kind} tag" placeholder="${rows.length === selected[kind].length ? 'Add tag' : ''}" /></div>`);
+    root.querySelector(`[data-tag-rows="${kind}"]`).innerHTML = rows.join('');
   };
-  const paintOptions = (kind) => {
-    const field = root.querySelector(`[data-tag-input="${kind}"]`);
+  const hideOptions = (kind) => { root.querySelector(`[data-tag-options="${kind}"]`).hidden = true; };
+  const paintOptions = (kind, field = root.querySelector(`[data-tag-input="${kind}"]`)) => {
     const options = root.querySelector(`[data-tag-options="${kind}"]`);
-    const term = field.value.trim().toLowerCase();
-    const matches = tagsAvailable.filter((tag) => !selected[kind].includes(tag) && (!term || tag.toLowerCase().includes(term))).slice(0, 5);
+    const term = field?.value.trim().toLowerCase() ?? '';
+    const matches = tagSuggestions({ options: tagsAvailable, includeTags: selected.include, excludeTags: selected.exclude, selectedKind: kind, query: term });
     options.hidden = matches.length === 0;
     options.innerHTML = matches.map((tag) => `<button type="button" data-add-tag="${kind}" data-tag="${esc(tag)}">${esc(tag)}</button>`).join('');
   };
+  const readFilters = () => ({ text: input('text').value.trim(), articlesOnly: input('articles-only').value, includeTags: [...selected.include], excludeTags: [...selected.exclude], after: input('after').value, before: input('before').value, order: input('order').value });
   const update = () => {
-    const filters = { text: input('text').value.trim(), articlesOnly: input('articles-only').value, includeTags: selected.include, excludeTags: selected.exclude, after: input('after').value, before: input('before').value, order: input('order').value };
+    const filters = readFilters();
     const active = filtersAreActive(filters);
     const filtered = filterCollection({ direct, descendants: all, filters });
     root.querySelector('[data-collection-hint]').hidden = !articleMode || active;
@@ -247,61 +315,102 @@ function mountCollection(id, articleMode) {
   };
   root.addEventListener('input', (event) => {
     const kind = event.target.dataset.tagInput;
-    if (kind) paintOptions(kind);
-    update();
+    if (kind) paintOptions(kind, event.target);
+    else update();
   });
   root.addEventListener('change', update);
+  root.addEventListener('focusin', (event) => {
+    const kind = event.target.dataset.tagInput;
+    if (kind) paintOptions(kind, event.target);
+  });
+  root.addEventListener('focusout', (event) => {
+    const filter = event.target.closest('[data-tag-filter]');
+    if (filter) setTimeout(() => { if (!filter.contains(document.activeElement)) hideOptions(filter.dataset.tagFilter); }, 0);
+  });
   root.addEventListener('click', (event) => {
     const add = event.target.closest('[data-add-tag]');
     const remove = event.target.closest('[data-remove-tag]');
-    if (add && !selected[add.dataset.addTag].includes(add.dataset.tag)) {
-      selected[add.dataset.addTag].push(add.dataset.tag);
-      root.querySelector(`[data-tag-input="${add.dataset.addTag}"]`).value = '';
-      paintChips(add.dataset.addTag); paintOptions(add.dataset.addTag); update();
+    if (add && selected[add.dataset.addTag].length < 5 && !selected.include.includes(add.dataset.tag) && !selected.exclude.includes(add.dataset.tag)) {
+      const kind = add.dataset.addTag;
+      selected[kind].push(add.dataset.tag.toLowerCase());
+      paintTagRows(kind); hideOptions(kind); update();
+      root.querySelector(`[data-tag-input="${kind}"]`)?.focus();
     }
     if (remove) {
       selected[remove.dataset.removeTag] = selected[remove.dataset.removeTag].filter((tag) => tag !== remove.dataset.tag);
-      paintChips(remove.dataset.removeTag); paintOptions(remove.dataset.removeTag); update();
+      paintTagRows(remove.dataset.removeTag); hideOptions(remove.dataset.removeTag); update();
     }
     if (event.target.closest('[data-clear-filters]')) {
       root.querySelectorAll('[data-filter]').forEach((control) => { control.value = control.dataset.filter === 'order' ? 'new' : ''; });
       selected.include = []; selected.exclude = [];
-      paintChips('include'); paintChips('exclude'); paintOptions('include'); paintOptions('exclude'); update();
+      paintTagRows('include'); paintTagRows('exclude'); hideOptions('include'); hideOptions('exclude'); update();
     }
   });
+  const panel = root.querySelector('[data-filter-panel]');
+  const panelHost = root.querySelector('[data-filter-panel-host]');
+  const dialog = root.querySelector('[data-filter-dialog]');
+  const dialogMount = root.querySelector('[data-filter-dialog-mount]');
+  let mobileBackup;
+  const restore = (snapshot) => {
+    for (const [name, value] of Object.entries(snapshot.controls)) input(name).value = value;
+    selected.include = [...snapshot.include]; selected.exclude = [...snapshot.exclude];
+    paintTagRows('include'); paintTagRows('exclude'); update();
+  };
+  root.querySelector('[data-mobile-filter-open]').addEventListener('click', () => {
+    mobileBackup = { controls: { text: input('text').value, before: input('before').value, after: input('after').value, order: input('order').value, 'articles-only': input('articles-only').value }, include: [...selected.include], exclude: [...selected.exclude] };
+    dialogMount.append(panel);
+    dialog.showModal();
+  });
+  root.querySelector('[data-filter-apply]').addEventListener('click', () => dialog.close('apply'));
+  root.querySelector('[data-filter-cancel]').addEventListener('click', () => dialog.close('cancel'));
+  dialog.addEventListener('cancel', (event) => { event.preventDefault(); dialog.close('cancel'); });
+  dialog.addEventListener('click', (event) => {
+    const bounds = root.querySelector('[data-filter-dialog-surface]').getBoundingClientRect();
+    if (event.target === dialog && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) dialog.close('apply');
+  });
+  dialog.addEventListener('close', () => {
+    panelHost.append(panel);
+    if (dialog.returnValue === 'cancel' && mobileBackup) restore(mobileBackup);
+    mobileBackup = null;
+  });
+  paintTagRows('include'); paintTagRows('exclude');
   update();
 }
 
-function renderCategory(id) {
+function renderListPage(id) {
   const category = categoryById(id) || articleById(id);
   if (!category) return renderHome();
   state.category = id;
   state.article = null;
+  syncTreeToCurrentEntry();
   const immediateChildren = directChildren(id);
   const categoryName = category.name || category.title;
-  const categoryShort = category.short || categoryName;
-  setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: categoryName }]);
-  main.innerHTML = `<header class="page-header"><p class="eyebrow">ARCHIVE / ${esc(categoryShort)}</p><h1>${esc(categoryName)}</h1><p>${esc(category.intro || category.subtitle || 'Preview the entries in this part of the archive.')}</p></header><section aria-label="${esc(categoryName)} entries">${immediateChildren.length ? collectionMarkup(id, false) : ''}<div class="category-results" id="category-results"></div></section>`;
+  setBreadcrumb(breadcrumbParts(id));
+  const devPublishControl = devPublicationControlMarkup(category, import.meta.env.DEV);
+  main.innerHTML = `<header class="page-header"><h1>${esc(categoryName)}</h1><p>${esc(category.intro || category.subtitle || 'Preview the entries in this part of the archive.')}</p></header>${devPublishControl}<section aria-label="${esc(categoryName)} entries">${immediateChildren.length ? collectionMarkup(id, false) : ''}<div class="category-results" id="category-results"></div></section>`;
   if (immediateChildren.length) mountCollection(id, false);
   else document.querySelector('#category-results').innerHTML = '<div class="empty-state"><strong>No child entries yet.</strong>This page will stay clean until it has something to preview.</div>';
   renderTree();
 }
 
 function renderArticle(id) {
-  const article = articleById(id);
+  const article = articleById(id) || categoryById(id);
   if (!article) return renderHome();
   // A node without article.md is an index page: show its child previews by default.
-  if (article.hasArticle === false) return renderCategory(article.id);
+  if (article.hasArticle === false) return renderListPage(article.id);
   const category = categoryById(article.category);
-  if (!category) return renderCategory(article.id);
+  if (!category) return renderListPage(article.id);
   state.category = category.id;
   state.article = article.id;
+  syncTreeToCurrentEntry();
   const hasChildren = directChildren(article.id).length > 0;
   const toc = article.headings?.length ? `<aside class="article-aside"><h2>On this page</h2><ul>${article.headings.map((heading) => `<li class="article-aside__level-${heading.depth}"><a href="#${esc(heading.id)}">${esc(heading.text)}</a></li>`).join('')}</ul></aside>` : '';
-  setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: category.name, href: `#category/${category.id}` }, { label: article.title }]);
-  const details = `${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && datePart(article.updatedAt) !== datePart(article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}`;
+  setBreadcrumb(breadcrumbParts(article.id));
+  const details = `${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && !sameTimestamp(article.updatedAt, article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}`;
+  const devPublishControl = devPublicationControlMarkup(article, import.meta.env.DEV);
   main.innerHTML = `
     ${articleHeaderMarkup(article, details)}
+    ${devPublishControl}
     <div class="article-layout">
       <article class="article-body article-markdown" data-pagefind-body>${article.html || ''}</article>
       ${toc}
@@ -314,7 +423,9 @@ function renderArticle(id) {
 function renderAbout() {
   state.category = null;
   state.article = null;
-  setBreadcrumb([{ label: 'Archive', href: '#home' }, { label: 'About' }]);
+  state.treeRoot = null;
+  state.treeFocus = null;
+  setBreadcrumb([{ label: 'Home', href: '/' }, { label: 'About' }]);
   main.innerHTML = `
     <section class="about">
       <p class="eyebrow">ABOUT THIS PROJECT</p>
@@ -325,36 +436,92 @@ function renderAbout() {
   renderTree();
 }
 
+let notFoundTimer;
+function renderNotFound() {
+  state.category = null;
+  state.article = null;
+  state.treeRoot = null;
+  state.treeFocus = null;
+  setBreadcrumb([{ label: 'Home', href: '/' }, { label: '404' }]);
+  let seconds = 5;
+  main.innerHTML = notFoundMarkup(window.location.pathname, seconds);
+  renderTree();
+  notFoundTimer = window.setInterval(() => {
+    seconds -= 1;
+    if (seconds <= 0) {
+      window.clearInterval(notFoundTimer);
+      navigateTo('/', { replace: true });
+      return;
+    }
+    const countdown = document.querySelector('[data-not-found-countdown]');
+    if (countdown) countdown.textContent = String(seconds);
+  }, 1000);
+}
+
 function route(resetScroll = true) {
+  window.clearInterval(notFoundTimer);
   if (dialog.open) dialog.close();
-  const hash = window.location.hash.replace(/^#/, '') || 'home';
-  const [kind, id] = hash.split('/');
-  if (kind === 'category') renderCategory(id);
-  else if (kind === 'article') renderArticle(id);
-  else if (kind === 'about') renderAbout();
-  else renderHome();
+  const target = resolveContentRoute(categories, articles, window.location.pathname);
+  if (target.type === 'list') renderListPage(target.entry.id);
+  else if (target.type === 'article') renderArticle(target.entry.id);
+  else if (target.type === 'about') renderAbout();
+  else if (target.type === 'home') renderHome();
+  else renderNotFound();
   if (resetScroll) window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
-function searchableEntries(query) {
-  const term = query.trim().toLowerCase();
-  return term ? articles.filter((article) => [article.title, article.subtitle, article.type, categoryById(article.category)?.name ?? '', ...article.tags].join(' ').toLowerCase().includes(term)) : [];
+function navigateTo(path, { replace = false } = {}) {
+  const target = normalizeRoutePath(path);
+  window.history[replace ? 'replaceState' : 'pushState']({}, '', target);
+  app.classList.remove('sidebar-open');
+  route();
 }
 
-function search(query) {
-  const term = query.trim().toLowerCase();
-  const matches = searchableEntries(query);
-  dialogResults.innerHTML = term
-    ? (matches.length ? matches.map((article) => `<div class="dialog-result"><button type="button" data-search-result="${article.id}">${thumb(article)}<span class="result-meta">${esc(categoryById(article.category)?.short ?? 'Archive')} · ${article.date ? formatDate(article.date) : 'Draft'}</span><strong>${esc(article.title)}</strong><p>${esc(article.subtitle)}</p></button></div>`).join('') : '<div class="empty-state"><strong>No result yet.</strong>Try a track, part, technique or repair.</div>')
-    : '<div class="empty-state"><strong>Search the archive.</strong>Results will include titles, subtitles, categories and tags.</div>';
+function migrateLegacyHashRoute() {
+  const match = window.location.hash.match(/^#(?:category|article)\/(.+)$/);
+  if (match) {
+    const entry = categoryById(match[1]) || articleById(match[1]);
+    if (entry) navigateTo(entryHref(entry), { replace: true });
+  } else if (window.location.hash === '#home') {
+    navigateTo('/', { replace: true });
+  } else if (window.location.hash === '#about') {
+    navigateTo('/about', { replace: true });
+  }
+}
+
+async function fullSearchResults(query) {
+  const pagefindIds = import.meta.env.DEV ? null : await searchPagefindEntryIds(query);
+  return rankFullSearchResults(articles, (article) => categoryById(article.category)?.name ?? '', query, pagefindIds);
+}
+
+let searchRequest = 0;
+async function search(query) {
+  const request = ++searchRequest;
+  const term = query.trim();
+  if (!term) {
+    dialogResults.innerHTML = '<div class="empty-state"><strong>Search the archive.</strong>Results will include titles, subtitles, categories, tags and article text.</div>';
+    return;
+  }
+  dialogResults.innerHTML = '<div class="empty-state"><strong>Searching…</strong></div>';
+  const matches = await fullSearchResults(term);
+  if (request !== searchRequest) return;
+  dialogResults.innerHTML = matches.length ? matches.map(({ entry, bodyContext: context }) => {
+    const categoryName = categoryById(entry.category)?.short ?? 'Archive';
+    const contextMarkup = context ? `<p class="result-context">${highlightedSearchText(context.text, term)}</p>` : '';
+    return `<div class="dialog-result"><button type="button" data-search-result="${entry.id}">${thumb(entry)}<span class="result-meta">${highlightedSearchText(categoryName, term)} · ${esc(entry.date ? formatDate(entry.date) : 'Unpublished')}</span><strong>${highlightedSearchText(entry.title, term)}</strong><p class="result-subtitle">${highlightedSearchText(entry.subtitle, term)}</p>${contextMarkup}</button></div>`;
+  }).join('') : '<div class="empty-state"><strong>No result yet.</strong>Try a track, part, technique or repair.</div>';
 }
 
 let suggestionTimer;
-function updateGlobalSuggestions() {
-  const matches = searchableEntries(globalInput.value).slice(0, 5);
+let suggestionRequest = 0;
+async function updateGlobalSuggestions() {
+  const request = ++suggestionRequest;
+  const term = globalInput.value.trim();
+  const matches = term ? (await fullSearchResults(term)).slice(0, 5) : [];
+  if (request !== suggestionRequest) return;
   globalSuggestions.hidden = matches.length === 0;
   globalInput.setAttribute('aria-expanded', String(matches.length > 0));
-  globalSuggestions.innerHTML = matches.map((article) => `<button class="search-suggestion" type="button" data-suggestion="${article.id}" role="option">${esc(article.title)}</button>`).join('');
+  globalSuggestions.innerHTML = matches.map(({ entry }) => `<button class="search-suggestion" type="button" data-suggestion="${entry.id}" role="option">${highlightedSearchText(entry.title, term)}</button>`).join('');
 }
 
 function openSearch(initial = '') {
@@ -364,46 +531,118 @@ function openSearch(initial = '') {
   requestAnimationFrame(() => dialogInput.focus());
 }
 
-document.addEventListener('click', (event) => {
+document.addEventListener('click', async (event) => {
   const categoryButton = event.target.closest('[data-category]');
-  const treeCategory = event.target.closest('[data-tree-category]');
+  const treeContext = event.target.closest('[data-tree-context]');
+  const treeEntry = event.target.closest('[data-tree-entry]');
+  const treeBack = event.target.closest('[data-tree-back]');
+  const devPublish = event.target.closest('[data-dev-publish]');
   const articleTarget = event.target.closest('[data-article]');
-  const routeTarget = event.target.closest('[data-route]');
+  const internalLink = event.target.closest('a[href^="/"]');
   const searchResult = event.target.closest('[data-search-result]');
   const suggestion = event.target.closest('[data-suggestion]');
   const scrollTarget = event.target.closest('[data-scroll]');
-  if (categoryButton) { window.location.hash = `category/${categoryButton.dataset.category}`; }
-  if (treeCategory) {
-    const children = treeCategory.parentElement.nextElementSibling;
-    const open = treeCategory.getAttribute('aria-expanded') === 'true';
-    treeCategory.setAttribute('aria-expanded', String(!open));
-    children.hidden = open;
+  const clickedInsideSidebar = Boolean(event.target.closest('#sidebar'));
+  const clickedSidebarToggle = Boolean(event.target.closest('#sidebar-open'));
+  if (shouldDismissSidebar({ wide: isWidescreen(window.innerWidth, window.innerHeight), clickedInsideSidebar, clickedToggle: clickedSidebarToggle })) app.classList.remove('sidebar-open');
+  if (categoryButton) {
+    const category = categoryById(categoryButton.dataset.category);
+    if (category) navigateTo(entryHref(category));
   }
-  if (articleTarget && !event.target.closest('a')) { window.location.hash = `article/${articleTarget.dataset.article}`; }
-  if (routeTarget) { window.location.hash = routeTarget.dataset.route; }
-  if (searchResult) { dialog.close(); window.location.hash = `article/${searchResult.dataset.searchResult}`; }
-  if (suggestion) { globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); window.location.hash = `article/${suggestion.dataset.suggestion}`; }
+  if (treeContext) {
+    event.preventDefault();
+    const rootId = treeContext.dataset.treeRoot;
+    const contextId = treeContext.dataset.treeContext;
+    const action = clickAction({ hasChildren: directChildren(contextId).length > 0, expanded: state.treeRoot === rootId });
+    if (action === 'expand') {
+      state.treeRoot = rootId;
+      state.treeFocus = contextId === rootId ? null : contextId;
+      renderTree();
+    } else {
+      navigateTo(treeContext.getAttribute('href'));
+    }
+  }
+  if (treeEntry) {
+    const entry = articleById(treeEntry.dataset.treeEntry);
+    if (entry && directChildren(entry.id).length) {
+      event.preventDefault();
+      state.treeRoot = rootIdForEntry(articles, entry.id);
+      state.treeFocus = entry.id;
+      renderTree();
+    }
+  }
+  if (treeBack) {
+    state.treeFocus = parentFocus(articles, treeBack.dataset.treeBack, state.treeFocus);
+    renderTree();
+  }
+  if (devPublish) {
+    devPublish.disabled = true;
+    devPublish.textContent = 'Saving…';
+    try {
+      const response = await fetch('/__dev/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: devPublish.dataset.devPublish }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not update publication state.');
+      const published = result.entry.published === true;
+      devPublish.classList.toggle('is-published', published);
+      devPublish.classList.toggle('is-unpublished', !published);
+      devPublish.setAttribute('aria-checked', String(published));
+      devPublish.setAttribute('aria-label', published ? 'Unpublish this entry locally' : 'Publish this entry locally');
+      devPublish.textContent = published ? 'Published' : 'Unpublished';
+      devPublish.disabled = false;
+    } catch (error) {
+      devPublish.disabled = false;
+      devPublish.textContent = 'Try again';
+      window.alert(error.message);
+    }
+  }
+  if (articleTarget && !event.target.closest('a')) {
+    const article = articleById(articleTarget.dataset.article);
+    if (article) navigateTo(entryHref(article));
+  }
+  if (searchResult) {
+    const article = articleById(searchResult.dataset.searchResult);
+    if (article) { dialog.close(); navigateTo(entryHref(article)); }
+  }
+  if (suggestion) {
+    const article = articleById(suggestion.dataset.suggestion);
+    if (article) { globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); navigateTo(entryHref(article)); }
+  }
   if (scrollTarget) { document.querySelector(scrollTarget.dataset.scroll)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  if (internalLink && !event.defaultPrevented && shouldInterceptInternalLink({
+    href: internalLink.getAttribute('href'),
+    download: internalLink.hasAttribute('download'),
+    modified: event.ctrlKey || event.metaKey || event.shiftKey || event.altKey,
+  })) {
+    event.preventDefault();
+    navigateTo(internalLink.getAttribute('href'));
+  }
 });
 
 document.addEventListener('keydown', (event) => {
   const row = event.target.closest?.('.article-row--clickable');
-  if (row && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); window.location.hash = `article/${row.dataset.article}`; }
+  if (row && (event.key === 'Enter' || event.key === ' ')) {
+    const article = articleById(row.dataset.article);
+    if (article) { event.preventDefault(); navigateTo(entryHref(article)); }
+  }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); openSearch(globalInput.value); }
 });
 
 document.querySelector('#global-search').addEventListener('submit', (event) => { event.preventDefault(); openSearch(globalInput.value); });
 globalInput.addEventListener('input', () => {
   clearTimeout(suggestionTimer);
+  suggestionRequest += 1;
+  globalSuggestions.hidden = true;
+  globalInput.setAttribute('aria-expanded', 'false');
   suggestionTimer = setTimeout(updateGlobalSuggestions, 500);
 });
-globalInput.addEventListener('blur', () => setTimeout(() => { globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); }, 150));
+globalInput.addEventListener('blur', () => setTimeout(() => { suggestionRequest += 1; globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); }, 150));
 document.querySelector('#dialog-search-form').addEventListener('submit', (event) => { event.preventDefault(); search(dialogInput.value); });
 dialogInput.addEventListener('input', () => search(dialogInput.value));
 document.querySelector('#search-dialog-close').addEventListener('click', () => dialog.close());
 document.querySelector('#sidebar-open').addEventListener('click', () => app.classList.add('sidebar-open'));
 document.querySelector('#sidebar-close').addEventListener('click', () => app.classList.remove('sidebar-open'));
-window.addEventListener('hashchange', () => { app.classList.remove('sidebar-open'); route(); });
+window.addEventListener('popstate', () => { app.classList.remove('sidebar-open'); route(); });
+window.addEventListener('resize', syncSidebarLayout);
 
 let loadedContentAt = '';
 async function loadPublishedContent(refresh = false) {
@@ -411,17 +650,21 @@ async function loadPublishedContent(refresh = false) {
     const response = await fetch('/content-index.json', { cache: 'no-store' });
     if (!response.ok) return;
     const content = await response.json();
-    if (Array.isArray(content.categories) && Array.isArray(content.articles) && content.articles.length && content.generated_at !== loadedContentAt) {
-      categories = content.categories;
-      articles = content.articles;
+    const selected = selectContentIndex(content);
+    if (content.generated_at !== loadedContentAt) {
+      categories = selected.categories;
+      articles = selected.articles;
       loadedContentAt = content.generated_at;
       if (refresh) route(false);
     }
   } catch {
-    // Opening the static prototype directly from disk has no fetch server; use the fallback.
+    // A static file opened from disk has no content server. Do not expose fixture data.
   }
 }
 
-loadPublishedContent().finally(route);
+loadPublishedContent().finally(() => {
+  migrateLegacyHashRoute();
+  route();
+});
 
 if (import.meta.hot) import.meta.hot.on('content-index-updated', () => loadPublishedContent(true));

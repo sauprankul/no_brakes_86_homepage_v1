@@ -7,7 +7,7 @@ import test from 'node:test';
 import { promisify } from 'node:util';
 import ffmpegPath from 'ffmpeg-static';
 import sharp from 'sharp';
-import { generateSizedMedia, mediaTypeFor, publicMediaPath, sizedMediaRelativePath, validateSizedMedia } from '../scripts/media-pipeline.mjs';
+import { generateSizedMedia, mediaTypeFor, publicMediaPath, sizedMediaRelativePath, validateSizedMedia } from '../../scripts/media-pipeline.mjs';
 
 test('generates a committed-sized JPEG and manifest from an ignored source image', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'no-brakes-media-'));
@@ -27,7 +27,9 @@ test('generates a committed-sized JPEG and manifest from an ignored source image
   assert.equal(publicMediaPath('entry-id', './Media/thumbnail.png'), '/media/entry-id/thumbnail.jpg');
   assert.equal(sizedMediaRelativePath('nested/thumbnail.heic', mediaTypeFor('nested/thumbnail.heic')), 'nested/thumbnail.jpg');
   await validateSizedMedia(path.join(root, 'Content'));
-
+  await sharp({ create: { width: 2400, height: 1350, channels: 3, background: '#111111' } }).png().toFile(path.join(media, 'thumbnail.png'));
+  const refreshed = await generateSizedMedia(path.join(root, 'Content'));
+  assert.ok(refreshed.includes(output), 'an updated source regenerates its SizedMedia output');
   await rm(path.join(media, 'thumbnail.png'));
   await generateSizedMedia(path.join(root, 'Content'));
   await assert.rejects(() => readFile(output));
@@ -44,4 +46,9 @@ test('converts a high-frame-rate source clip to the static MP4 profile', async (
   await generateSizedMedia(path.join(root, 'Content'));
   await validateSizedMedia(path.join(root, 'Content'));
   await readFile(path.join(root, 'Content', 'entry', 'SizedMedia', 'lap.mp4'));
+});
+
+test('the HEIC reader permits complex but locally authored container references while retaining the pixel limit', async () => {
+  const pipeline = await readFile(path.join(process.cwd(), 'scripts', 'media-pipeline.mjs'), 'utf8');
+  assert.match(pipeline, /sharp\(source, \{ limitInputPixels: 100_000_000, unlimited: true \}\)/);
 });

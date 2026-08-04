@@ -1,11 +1,14 @@
 node_type: article
 id: 2026-laguna-seca
-parent: 86-challenge
-title: '2026 Rd 2: Laguna Seca'
+parent: 2026-86-challenge
+title: "2026 Rd 2: Laguna Seca"
 subtitle: Smelling blood
 content_type: Event
-published: false
-published_at: null
-updated_at: null
-tags: [86-challenge, 2026, laguna-seca]
+published: true
+published_at: 2026-08-04T00:17:43.446Z
+updated_at: 2026-08-04T01:23:34.520Z
+tags:
+  - 86-challenge
+  - 2026
+  - laguna-seca
 media_label: RACE

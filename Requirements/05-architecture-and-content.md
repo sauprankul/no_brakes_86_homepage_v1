@@ -14,13 +14,21 @@ The repository root must remain author-focused. `Content/`, `Documentation/`, `R
 
 ## Node authoring model
 
+The production build assembles generated media and the production-only content index in a temporary public-asset staging directory. It never mutates the draft-inclusive `public/` directory used by an active authoring preview, so local authoring and a production build can run at the same time without file locks or mixed draft assets.
+
 Everything is an entry in the archive. Every entry directory contains exactly one `config.yaml`; no `_node.yaml`, category-specific metadata file, or separate metadata convention is allowed. `article.md` is optional:
 
 - no `article.md`: render the entry title/subtitle and a preview list of direct children;
 - `article.md`: render authored Markdown as article content;
 - both article and child folders: render the article first and show the child-search controls beneath it.
 
-`npm run dev` is the local VS Code authoring loop. It includes drafts, rebuilds the content index, refreshes the browser, and updates edited entry timestamps once per minute. It never publishes. The production build includes only `published: true` entries.
+`npm run dev` is the local VS Code authoring loop. It includes every entry regardless of publication state, gives every unpublished navigation entry a red draft highlight, refreshes the browser only after a source delta, and updates authored-entry timestamps at most once per minute. The watcher hashes `article.md` content, hashes a file only when its size or modification time changed, ignores generated `SizedMedia/`, and compares complete source snapshots before rebuilding. Duplicate, generated, and no-content-change filesystem events produce no rebuild and no timestamp change. Only a net change to an entry's `article.md` or `Media/` author source makes that entry eligible for `updated_at`; config-only, Downloads-only, generated-media, and render events do not. If authored content changes and then returns to its prior fingerprint before the minute flush, its timestamp remains unchanged. Its local-only Vite middleware may toggle any current entry’s `published` value and persist the required timestamps; it also patches that exact entry in the generated browser index before responding so nested entries cannot remain visually stale. It is bound to local development and is absent from the static build. The production build includes only `published: true` entries. If zero entries are published, the generated index and rendered public UI are empty rather than substituting prototype data.
+
+Every source-triggered authoring rebuild logs one grouped reason before rebuilding, including each exact repository-relative changed path and whether it is `article.md`, `Media`, `config.yaml`, or `Downloads`. The minute timestamp flush separately logs each exact `config.yaml` it changes. A no-op event is silent. A real delta may still reserialize the shared content index; delta gating means an unchanged source tree never does.
+
+During `npm run dev`, application console output, warnings, errors, uncaught browser exceptions, and unhandled promise rejections must be mirrored to the same authoring terminal with a browser-source prefix. Browser-only failures must never be discoverable solely through developer tools. The log bridge and its local endpoint are development-only and are absent from production behavior.
+
+The generated index assigns every entry a title-derived path built from its complete parent hierarchy. The browser independently derives the same path from entry titles and parent relationships when a generated path is absent, so a stale local index cannot turn a hierarchy link into an unmatched flat URL. The browser router resolves that path to one entry and chooses article or preview-list rendering solely from the generated `hasArticle` value, which itself comes only from the presence of `article.md`. Cloudflare Pages' SPA fallback serves `index.html` for direct requests to these hierarchy paths.
 
 ## Media contract
 
@@ -46,23 +54,27 @@ The media generator accepts only `.jpg`, `.jpeg`, `.png`, `.heic`, `.heif`, `.mo
 
 The generator must reject unsupported input, name collisions after conversion, unconvertible media, video longer than 30 seconds, image/video dimensions above the generated limits, frame rate above 30fps, or any output above Cloudflare Pages' 25 MiB file limit. It must never silently truncate, discard, or publish a source file.
 
-The repository Git pre-commit hook runs the generator and stages only generated `SizedMedia/` files. CI validates committed `SizedMedia/` without needing the ignored source originals. `npm run media:prepare` performs generation; `npm run media:validate` validates generated output.
+During `npm run dev`, the content watcher runs the generator before rebuilding the rendered index so new or changed originals become available in the live authoring preview. The watch build updates generated media and downloads incrementally and must never delete the complete live `public/media` tree before rebuilding the index; Windows file contention must not abort the index refresh or leave stale publication state. Missing optional source directories are ignored, but real scan/copy failures are propagated to the authoring terminal. A production build continues to use an isolated clean staging tree. The repository Git pre-commit hook also runs the generator and stages only missing or changed generated `SizedMedia/` files. CI validates committed `SizedMedia/` without needing the ignored source originals. `npm run media:prepare` performs generation; `npm run media:validate` validates generated output.
 
-Markdown may reference an original using `./Media/<file>`. The Markdown compiler must render the matching deployed `/media/<entry-id>/<generated-file>` URL. Generated HTML must never reference a local `Media/` path. A `Media/thumbnail.*` source generates `SizedMedia/thumbnail.jpg`, which is the default preview and banner image for that entry.
+Markdown may reference an original using `./Media/<file>`. The Markdown compiler must render the matching deployed `/media/<entry-id>/<generated-file>` URL. Generated HTML must never reference a local `Media/` path. A `Media/thumbnail.*` source generates `SizedMedia/thumbnail.jpg`, which is used as that entry’s optional preview and banner image.
 
 Short clips use native `<video>` playback with visible pause/scrub controls, `playsinline`, `preload="metadata"`, and an accessible text alternative. Autoplay, mute, and loop are opt-in per clip. There is one static rendition for MVP; adaptive delivery is explicitly deferred until its quality benefit warrants a revised cost model.
 
-## Content validation and tests
+## Content validation
 
-Published entries must validate title, subtitle, parent, publication state, immutable `published_at`, `updated_at`, tags, thumbnail, thumbnail alt text, and child links from an article to each direct child. A published thumbnail must resolve to generated public media or an intentionally approved external asset.
+Published articles must validate title and subtitle; a published index entry validates title plus either subtitle or description. Published entries also validate parent when present, publication state, immutable `published_at`, `updated_at`, optional tags, and child links from an article to each direct child. A numeric YAML tag such as `2026` is valid and is normalized to display/search text. Every non-null `published_at` and `updated_at`, including a retained timestamp on an unpublished entry, must be a complete ISO 8601 timestamp with a `Z` or numeric offset. A thumbnail is optional; when configured, it must resolve to generated public media or an intentionally approved external asset and include appropriate alt text.
 
-The required quality gate runs content validation, generated-media validation, JS/TS linting, published-article Markdown linting, type-checking, unit tests, full collection-filter coverage, and a production build. Synthetic fixtures belong in `src/test/testdata/`; feature tests must not depend on production content. The media suite must cover source-to-output mapping, image conversion/resizing, manifest generation, generated-output validation, and Markdown media URL rewriting. A repository-boundary test must enforce both the clean root allowlist and the absence of analytics runtime, collector, middleware, endpoint, CSP allowance, and deployment configuration during MVP.
+The pull-request quality gate validates published content and generated media, lints the application and published Markdown, type-checks, and produces a production build.
 
 ## Search and information architecture
 
-Search/filter remains static, client-side, and free. Untouched non-article entry pages list direct children. Once a user changes a query or filter, direct and indirect descendants become candidates. Article entries with children show a faint search hint below the article until a criterion becomes active, then show matching direct and indirect descendants.
+Search/filter remains static, client-side, and free. Untouched non-article entry pages render every direct child as a preview row. Once a user changes a query or filter, direct and indirect descendants become candidates. Published entries take precedence within every selected sort; an unpublished preview shows a red `Unpublished` tag. Article entries with children show a faint search hint below the article until a criterion becomes active, then show matching direct and indirect descendants.
 
-The public UI uses “entries” and “articles,” never “nodes.” Filters include text, Articles only? (`Any`, `Yes`, `No`), multiple include/exclude tag chips, publication dates, and ordering. The direct-child/default and recursive/active-filter rules retain 100% statement, branch, function, and line coverage against synthetic fixtures.
+The content compiler extracts searchable text by rendered element (`h1`–`h6`, paragraph, list item, blockquote, caption, and table cell) on every authoring index refresh. The production pipeline creates Pagefind input documents from published article HTML at each entry's canonical hierarchical URL after Vite emits `dist/`, writes the static Pagefind bundle into `dist/pagefind/`, and ships no search server. The client loads that bundle lazily only for a full production search. Pagefind's required WebAssembly and worker directives must remain in the production CSP.
+
+The sidebar is a compact, one-branch-at-a-time drill-in navigator. It lists only direct children of the current sidebar context, supports unlimited entry depth, wraps each path entry in its own indented row, and offers an explicit Collapse action. Opening a different top-level branch collapses the previously opened one.
+
+The public UI uses “entries” and “articles,” never “nodes.” Filters include text, Articles only? (`Any`, `Yes`, `No`), multiple include/exclude tag chips, publication dates, and ordering.
 
 ## Deployment
 
@@ -72,4 +84,4 @@ GitHub Actions is the pull-request quality gate only. It must not hold Cloudflar
 npm ci && npm run check && npm run build
 ```
 
-The Pages output directory is `dist`. A merge to `main` creates the production deployment; branches may create preview deployments. The production build respects `published: true`; local authoring preview includes drafts.
+The Pages output directory is `dist`. A merge to `main` creates the production deployment; branches may create preview deployments. The production build respects `published: true`, rebuilds Pagefind from only that published snapshot, and local authoring preview includes drafts.

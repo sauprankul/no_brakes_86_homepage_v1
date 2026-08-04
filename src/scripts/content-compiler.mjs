@@ -27,7 +27,27 @@ function sizedMediaMarkup(html, nodeId) {
   });
 }
 
-export function renderArticleMarkdown(markdown, nodeId) {
+function decodeText(value) {
+  const named = { amp: '&', apos: "'", gt: '>', lt: '<', quot: '"', nbsp: ' ' };
+  return value.replace(/&(#x[0-9a-f]+|#\d+|amp|apos|gt|lt|quot|nbsp);/gi, (_match, entity) => {
+    if (entity[0] !== '#') return named[entity.toLowerCase()] ?? _match;
+    const radix = entity[1].toLowerCase() === 'x' ? 16 : 10;
+    const digits = radix === 16 ? entity.slice(2) : entity.slice(1);
+    return String.fromCodePoint(Number.parseInt(digits, radix));
+  });
+}
+
+export function searchSectionsFromHtml(html) {
+  const sections = [];
+  const blocks = /<(h[1-6]|p|li|blockquote|figcaption|td|th)(?:\s[^>]*)?>([\s\S]*?)<\/\1>/gi;
+  for (const match of html.matchAll(blocks)) {
+    const text = decodeText(sanitizeHtml(match[2], { allowedTags: [], allowedAttributes: {} })).replace(/\s+/g, ' ').trim();
+    if (text) sections.push({ kind: /^h[1-6]$/i.test(match[1]) ? 'heading' : match[1].toLowerCase(), text });
+  }
+  return sections;
+}
+
+export function renderArticleMarkdown(markdown, nodeId, entryPath = `/${nodeId}`) {
   const headings = [];
   const usedIds = new Map();
   const renderer = new Renderer();
@@ -52,6 +72,17 @@ export function renderArticleMarkdown(markdown, nodeId) {
       video: ['src', 'poster', 'controls', 'loop', 'muted', 'autoplay', 'playsinline', 'preload', 'width', 'height'],
     },
   });
-  const html = sizedMediaMarkup(safeHtml.replace(/<a href="\.\/Downloads\/([^"?#]+)">([^<]+)<\/a>/g, (_match, file, label) => downloadMarkup(`/downloads/${nodeId}/${encodeURIComponent(file)}`, label)), nodeId);
-  return { html, headings };
+  const withTableContainers = safeHtml.replace(/<table([^>]*)>([\s\S]*?)<\/table>/g, '<div class="article-table-scroll"><table$1>$2</table></div>');
+  const downloadRoot = `${entryPath.replace(/\/+$/, '')}/downloads`;
+  const html = sizedMediaMarkup(withTableContainers.replace(/<a href="\.\/Downloads\/([^"?#]+)">([^<]+)<\/a>/g, (_match, file, label) => {
+    const encodedFile = file.split('/').map((segment) => {
+      try {
+        return encodeURIComponent(decodeURIComponent(segment));
+      } catch {
+        return encodeURIComponent(segment);
+      }
+    }).join('/');
+    return downloadMarkup(`${downloadRoot}/${encodedFile}`, label);
+  }), nodeId);
+  return { html, headings, searchSections: searchSectionsFromHtml(html) };
 }

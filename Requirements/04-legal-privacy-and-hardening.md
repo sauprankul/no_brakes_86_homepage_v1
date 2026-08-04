@@ -52,8 +52,8 @@ This is a temporary **US-only MVP**. The production edge must block every reques
 - Deploy as static files on Cloudflare Pages Free behind the Cloudflare Free CDN/WAF. There is no public database, login, Pages Function, Worker, or server-rendered user input path in v1.
 - Enable Bot Fight Mode, a WAF custom rule that blocks non-US traffic for the MVP, and the available Free-plan rate-limit rule. Do not add runtime code merely for these controls.
 - Enforce HTTPS and canonical hostname. Enable HSTS only after confirming all subdomains support HTTPS.
-- Begin with a restrictive Content Security Policy, `frame-ancestors 'none'`, `nosniff`, Referrer-Policy and a narrow Permissions-Policy. The prototype includes `src/public/_headers`; amend CSP only for intentional embeds.
-- Limit embeds to documented allowlisted origins; favor click-to-load YouTube privacy-enhanced embeds. No arbitrary third-party scripts.
+- Begin with a restrictive Content Security Policy, `frame-ancestors 'none'`, `nosniff`, Referrer-Policy and a narrow Permissions-Policy. The production `_headers` allowlist intentionally permits iframe children from `https://www.youtube-nocookie.com` and `https://www.youtube.com`; do not broaden `frame-src` for arbitrary providers.
+- Limit embeds to documented allowlisted origins. YouTube embeds are an explicit product feature and may use either privacy-enhanced or standard YouTube embed URLs when required for playback; no arbitrary third-party scripts.
 - Keep the source repository private if it contains unpublished media, drafts or anything sensitive. Enable MFA, least privilege, branch protection and dependency-update review.
 - Run dependency and secret scanning in CI. Reject leaked tokens at commit time. Rotate any credential that is ever exposed.
 - Validate build-time frontmatter and outbound URLs; escape user-controlled strings if comments or forms ever become a feature.
