@@ -29,7 +29,7 @@ I spent most of last season in tears for one reason or another. Play in my steer
 
 This was my last shot to match Dennis's 2:05.7 Bypass time. Cyclone is understood to add 2.5s to the lap, so a 2:08.3 would be on par. After this round, we'd be switching to Yokohama V601 and the laptimes wouldn't be comparable anymore.
 
-It was a cool, slick morning. The cool weather held up most of the day, and we had a dedicated run group, which allowed for plenty of clean laps. 
+It was a cool, slick morning. The cool weather held up most of the day, and we had a dedicated run group, which allowed for plenty of clean laps.
 
 Unfortunately, my pig of a car had suddenly turned into an oversteer monster, and I couldn't get the exits I needed to nail a P1 or match Dennis's benchmark. Ivan was able to do both, with a 2:08.2, 8 tenths ahead of me.
 

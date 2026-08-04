@@ -25,7 +25,7 @@ The data from last round said that my car was really touchy on the throttle. It 
 
 I also reduced rear pressure. ~36psi front and ~33psi rear hot.
 
-I was pleasantly suprised by how much more tractable the car was. Laguna is a very exit-heavy track so I wouldn't have been able to do well if my exits didn't get a whole lot better. 
+I was pleasantly suprised by how much more tractable the car was. Laguna is a very exit-heavy track so I wouldn't have been able to do well if my exits didn't get a whole lot better.
 
 I was able to end the day just 3 tenths off Ivan, and set a PB by a massive 4 tenths despite these SX2s being on their 7th track day.
 
