@@ -60,13 +60,17 @@ Do not publish an article with an empty title or unvalidated external URL. If it
 - The global search matches title, subtitle, category, tags and, in production, full body text.
 - Unquoted multi-word queries match all query words regardless of order. An exact phrase and the original word order rank ahead of reordered matches. Search must deduplicate entries that match through both metadata and body text; do not generate factorial query permutations when the search engine already provides order-independent matching.
 - Search is case-insensitive, debounced and keyboard accessible.
-- The five-result header dropdown remains a compact metadata suggestion list. Body excerpts appear only in the full search dialog.
+- The five-result header dropdown uses the same full-text candidate set, ranking, and deduplication as the full search dialog, then shows the first five titles in that exact order. Body excerpts remain exclusive to the full dialog, but body-only matches are eligible for the dropdown.
+- Search results highlight matched words with the theme yellow treatment. A full-dialog body-only match retains the entry subtitle and adds the matching body excerpt beneath it; the excerpt never replaces the subtitle.
 - Every page that has direct children exposes the search/filter tool. Index pages place it above the preview list; article pages place it below the Markdown body.
 - An index page initially lists direct children only. Once the visitor changes any query or filter, matching direct and indirect descendants become candidates.
 - Every direct child of a list page renders as a preview row, whether it is an article or another list page. Within every selected order, published entries sort ahead of unpublished entries. Each unpublished preview displays one red `Unpublished` status tag; it does not also display `Draft` as a substitute publication date.
 - An article with children initially lists no children and shows only the faint hint “Search for something under this article.” Once the visitor changes any query or filter, matching direct and indirect descendants appear.
 - Filtering includes text match, an “Articles only?” choice (`Any`, `Yes`, or `No`), multiple include tags, multiple exclude tags, publication date, and ordering. The public interface must use “entries” or “articles”, never the technical word “node”.
 - Include/exclude tags are typeahead text fields: show up to five matching suggestions and represent selected tags as removable chips.
+- Include and exclude tags each reserve exactly five compact rows. Empty rows accept typing; selected values remain lowercase and removable. Focusing any empty row immediately shows up to five unselected tags ordered by archive frequency, then alphabetically for ties. Typing narrows that list. Include and exclude choices are mutually exclusive, each list accepts at most five values, and its suggestion list closes when focus leaves the table.
+- On desktop, Search spans the primary control area; Published before, Published after, Order, and Articles only? share one row beneath it. The two fixed-height tag tables occupy the adjacent area and remain usable at a half-width 16:9 desktop viewport.
+- On mobile, replace the static controls with one `Search / Filter / Sort` button. It opens a modal containing the same controls and current state. A yellow Apply button, gray Cancel button, Escape-as-cancel, and clicking the backdrop-as-apply are required. Cancel restores the values that existed when the modal opened.
 - Display active filters and result count only after a filter is active. A clear-all action is required when filters are active.
 
 ### Phase 2: full-text without an API

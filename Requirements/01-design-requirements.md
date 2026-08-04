@@ -39,6 +39,8 @@ The homepage must therefore provide equal visual weight to `New` and `Hot`, side
 - Motion must be understated and respect `prefers-reduced-motion` when production motion is added.
 - Hover is optional enhancement only; never conceal an action behind hover.
 - During local development only, the publication control is a compact, pinned top-right toggle that overlays the page without shifting its content. It is red and labeled `Unpublished` when off, green and labeled `Published` when on, and has no separate local-preview status label.
+- In article metadata, tag chips remain inline with the `Tags` label rather than dropping to a separate line.
+- Desktop collection controls use a compact search-and-four-filter block beside two fixed five-row tag tables. Mobile replaces that block with one Search / Filter / Sort button and a focused modal with clear Apply and Cancel actions.
 - Breadcrumbs are absent on Home and otherwise show `Home` followed by the complete archive hierarchy. Do not repeat that hierarchy as a separate eyebrow above the page title.
 
 ## Content integrity requirement

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { filterCollection, filtersAreActive, tagOptions } from '../../../scripts/collection-filter.mjs';
+import { filterCollection, filtersAreActive, tagOptions, tagSuggestions } from '../../../scripts/collection-filter.mjs';
 import { descendants, direct } from '../../testdata/collection-fixture.mjs';
 
 const defaults = () => ({ text: '', articlesOnly: '', includeTags: [], excludeTags: [], after: '', before: '', order: 'new' });
@@ -21,6 +21,14 @@ test('numeric YAML tags cannot abort preview-list rendering', () => {
     descendants: [],
     filters: defaults(),
   })), ['numeric-tag', 'missing-tags']);
+});
+
+test('tag choices are lowercase, frequency-ranked, mutually exclusive, and capped at five', () => {
+  const options = tagOptions([{ tags: ['Track', 'Setup'] }, { tags: ['track', 'Tires'] }, { tags: ['track', 'Brakes'] }, { tags: ['Data', 'Race', 'Street'] }]);
+  assert.deepEqual(options.slice(0, 3), ['track', 'brakes', 'data']);
+  assert.deepEqual(tagSuggestions({ options, includeTags: ['track'], excludeTags: ['setup'], selectedKind: 'include' }), ['brakes', 'data', 'race', 'street', 'tires']);
+  assert.deepEqual(tagSuggestions({ options, includeTags: ['track'], excludeTags: ['setup'], selectedKind: 'exclude', query: 'ti' }), ['tires']);
+  assert.deepEqual(tagSuggestions({ options, includeTags: ['one', 'two', 'three', 'four', 'five'], excludeTags: [], selectedKind: 'include' }), []);
 });
 
 test('an active query expands candidates to direct and indirect entries', () => {

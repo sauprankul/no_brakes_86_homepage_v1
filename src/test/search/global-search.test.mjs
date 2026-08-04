@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { bodyContext, rankFullSearchResults, rankMetadataResults } from '../../scripts/search-ranking.mjs';
+import { highlightedSearchText } from '../../scripts/search-view.mjs';
 
 const entries = [
   { id: 'exact', title: '2026 Thunderhill notes', subtitle: 'Season opener', type: 'Article', tags: [], searchSections: [] },
@@ -29,4 +30,9 @@ test('full search deduplicates metadata and Pagefind body matches by entry', () 
   assert.equal(results.length, 1);
   assert.equal(results[0].entry.id, 'one');
   assert.equal(results[0].bodyContext, null);
+});
+
+test('search result highlighting is escaped and marks every matched word', () => {
+  assert.equal(highlightedSearchText('Thunderhill <2026>', '2026 thunder'), '<mark class="search-match">Thunder</mark>hill &lt;<mark class="search-match">2026</mark>&gt;');
+  assert.equal(highlightedSearchText('Safe title', ''), 'Safe title');
 });

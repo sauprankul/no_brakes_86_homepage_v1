@@ -1,4 +1,4 @@
-import { filterCollection, filtersAreActive, tagOptions } from './scripts/collection-filter.mjs';
+import { filterCollection, filtersAreActive, tagOptions, tagSuggestions } from './scripts/collection-filter.mjs';
 import { articleHeaderMarkup } from './scripts/article-view.mjs';
 import { installClientLogBridge } from './scripts/client-log-bridge.mjs';
 import { selectContentIndex } from './scripts/content-index-client.mjs';
@@ -9,7 +9,8 @@ import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar, sh
 import { notFoundMarkup } from './scripts/not-found-view.mjs';
 import { previewPublicationBadge, previewPublicationDate } from './scripts/preview-status.mjs';
 import { searchPagefindEntryIds } from './scripts/pagefind-client.mjs';
-import { rankFullSearchResults, rankMetadataResults } from './scripts/search-ranking.mjs';
+import { rankFullSearchResults } from './scripts/search-ranking.mjs';
+import { highlightedSearchText } from './scripts/search-view.mjs';
 
 if (import.meta.env.DEV) installClientLogBridge({
   consoleObject: console,
@@ -108,7 +109,7 @@ function thumb(article) {
   return `<div class="thumb" aria-hidden="true"><span class="thumb__label">${esc(article.media)}</span><span class="thumb__line thumb__line--one"></span><span class="thumb__line thumb__line--two"></span><span class="thumb__corner"></span></div>`;
 }
 
-function tags(tags) { return `<div class="tags">${tags.map((tag) => `<span class="tag">${esc(tag)}</span>`).join('')}</div>`; }
+function tags(tags) { return `<span class="tags">${tags.map((tag) => `<span class="tag">${esc(tag)}</span>`).join('')}</span>`; }
 
 function articleRow(article, expanded = false) {
   const dateLabel = previewPublicationDate(article, formatDate);
@@ -244,18 +245,37 @@ function renderHome() {
   renderTree();
 }
 
+function tagTableMarkup(kind, label) {
+  return `<section class="tag-filter" data-tag-filter="${kind}" aria-label="${label}">
+    <span class="filter-label">${label}</span>
+    <div class="tag-filter__table" data-tag-rows="${kind}"></div>
+    <div class="tag-options" data-tag-options="${kind}" hidden></div>
+  </section>`;
+}
+
+function filterPanelMarkup() {
+  return `<div class="filter-panel" data-filter-panel>
+    <div class="filter-primary">
+      <label class="filter-search"><span>Search</span><input data-filter="text" type="search" placeholder="Search title, subtitle or tags…" /></label>
+      <div class="filter-row">
+        <label><span>Published before</span><input data-filter="before" type="date" /></label>
+        <label><span>Published after</span><input data-filter="after" type="date" /></label>
+        <label><span>Order</span><select data-filter="order"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="title">Title A–Z</option></select></label>
+        <label><span>Articles only?</span><select data-filter="articles-only"><option value="">Any</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+      </div>
+    </div>
+    <div class="tag-tables">${tagTableMarkup('include', 'Include tags')}${tagTableMarkup('exclude', 'Exclude tags')}</div>
+  </div>`;
+}
+
 function collectionMarkup(id, articleMode) {
   const placement = articleMode ? 'collection-controls--article' : 'collection-controls--index';
   return `<section class="collection-controls ${placement}" id="collection-${id}" aria-label="Search entries below this page">
-    <div class="filters">
-      <label><span>Search</span><input data-filter="text" type="search" placeholder="Search title, subtitle or tags…" /></label>
-      <label><span>Articles only?</span><select data-filter="articles-only"><option value="">Any</option><option value="yes">Yes</option><option value="no">No</option></select></label>
-      <label class="tag-filter"><span>Include tags</span><div class="tag-filter__box" data-tag-box="include"><div class="tag-chips" data-tag-chips="include"></div><input data-tag-input="include" type="search" autocomplete="off" placeholder="Type a tag" /></div><div class="tag-options" data-tag-options="include" hidden></div></label>
-      <label class="tag-filter"><span>Exclude tags</span><div class="tag-filter__box" data-tag-box="exclude"><div class="tag-chips" data-tag-chips="exclude"></div><input data-tag-input="exclude" type="search" autocomplete="off" placeholder="Type a tag" /></div><div class="tag-options" data-tag-options="exclude" hidden></div></label>
-      <label><span>Published after</span><input data-filter="after" type="date" /></label>
-      <label><span>Published before</span><input data-filter="before" type="date" /></label>
-      <label><span>Order</span><select data-filter="order"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="title">Title A–Z</option></select></label>
-    </div>
+    <button class="mobile-filter-open" type="button" data-mobile-filter-open>Search / Filter / Sort</button>
+    <div class="filter-panel-host" data-filter-panel-host>${filterPanelMarkup()}</div>
+    <dialog class="collection-filter-dialog" data-filter-dialog aria-label="Search, filter and sort entries">
+      <div class="collection-filter-dialog__surface" data-filter-dialog-surface><div data-filter-dialog-mount></div><div class="collection-filter-dialog__actions"><button class="filter-cancel" type="button" data-filter-cancel>Cancel</button><button class="filter-apply" type="button" data-filter-apply>Apply</button></div></div>
+    </dialog>
     <div class="collection-status"><p class="collection-hint" data-collection-hint ${articleMode ? '' : 'hidden'}>Search for something under this article.</p><button class="clear-filters" type="button" data-clear-filters hidden>Clear filters</button></div>
     <p class="filter-count" data-filter-count ${articleMode ? 'hidden' : ''}></p>
   </section>`;
@@ -269,19 +289,22 @@ function mountCollection(id, articleMode) {
   const tagsAvailable = tagOptions(all);
   const selected = { include: [], exclude: [] };
   const input = (name) => root.querySelector(`[data-filter="${name}"]`);
-  const paintChips = (kind) => {
-    root.querySelector(`[data-tag-chips="${kind}"]`).innerHTML = selected[kind].map((tag) => `<span class="tag-chip">${esc(tag)}<button type="button" data-remove-tag="${kind}" data-tag="${esc(tag)}" aria-label="Remove ${esc(tag)}">×</button></span>`).join('');
+  const paintTagRows = (kind) => {
+    const rows = selected[kind].map((tag) => `<div class="tag-slot tag-slot--selected"><span>${esc(tag.toLowerCase())}</span><button type="button" data-remove-tag="${kind}" data-tag="${esc(tag)}" aria-label="Remove ${esc(tag)}">×</button></div>`);
+    while (rows.length < 5) rows.push(`<div class="tag-slot tag-slot--empty"><input data-tag-input="${kind}" type="search" autocomplete="off" aria-label="Add ${kind} tag" placeholder="${rows.length === selected[kind].length ? 'Add tag' : ''}" /></div>`);
+    root.querySelector(`[data-tag-rows="${kind}"]`).innerHTML = rows.join('');
   };
-  const paintOptions = (kind) => {
-    const field = root.querySelector(`[data-tag-input="${kind}"]`);
+  const hideOptions = (kind) => { root.querySelector(`[data-tag-options="${kind}"]`).hidden = true; };
+  const paintOptions = (kind, field = root.querySelector(`[data-tag-input="${kind}"]`)) => {
     const options = root.querySelector(`[data-tag-options="${kind}"]`);
-    const term = field.value.trim().toLowerCase();
-    const matches = tagsAvailable.filter((tag) => !selected[kind].includes(tag) && (!term || tag.toLowerCase().includes(term))).slice(0, 5);
+    const term = field?.value.trim().toLowerCase() ?? '';
+    const matches = tagSuggestions({ options: tagsAvailable, includeTags: selected.include, excludeTags: selected.exclude, selectedKind: kind, query: term });
     options.hidden = matches.length === 0;
     options.innerHTML = matches.map((tag) => `<button type="button" data-add-tag="${kind}" data-tag="${esc(tag)}">${esc(tag)}</button>`).join('');
   };
+  const readFilters = () => ({ text: input('text').value.trim(), articlesOnly: input('articles-only').value, includeTags: [...selected.include], excludeTags: [...selected.exclude], after: input('after').value, before: input('before').value, order: input('order').value });
   const update = () => {
-    const filters = { text: input('text').value.trim(), articlesOnly: input('articles-only').value, includeTags: selected.include, excludeTags: selected.exclude, after: input('after').value, before: input('before').value, order: input('order').value };
+    const filters = readFilters();
     const active = filtersAreActive(filters);
     const filtered = filterCollection({ direct, descendants: all, filters });
     root.querySelector('[data-collection-hint]').hidden = !articleMode || active;
@@ -292,28 +315,65 @@ function mountCollection(id, articleMode) {
   };
   root.addEventListener('input', (event) => {
     const kind = event.target.dataset.tagInput;
-    if (kind) paintOptions(kind);
-    update();
+    if (kind) paintOptions(kind, event.target);
+    else update();
   });
   root.addEventListener('change', update);
+  root.addEventListener('focusin', (event) => {
+    const kind = event.target.dataset.tagInput;
+    if (kind) paintOptions(kind, event.target);
+  });
+  root.addEventListener('focusout', (event) => {
+    const filter = event.target.closest('[data-tag-filter]');
+    if (filter) setTimeout(() => { if (!filter.contains(document.activeElement)) hideOptions(filter.dataset.tagFilter); }, 0);
+  });
   root.addEventListener('click', (event) => {
     const add = event.target.closest('[data-add-tag]');
     const remove = event.target.closest('[data-remove-tag]');
-    if (add && !selected[add.dataset.addTag].includes(add.dataset.tag)) {
-      selected[add.dataset.addTag].push(add.dataset.tag);
-      root.querySelector(`[data-tag-input="${add.dataset.addTag}"]`).value = '';
-      paintChips(add.dataset.addTag); paintOptions(add.dataset.addTag); update();
+    if (add && selected[add.dataset.addTag].length < 5 && !selected.include.includes(add.dataset.tag) && !selected.exclude.includes(add.dataset.tag)) {
+      const kind = add.dataset.addTag;
+      selected[kind].push(add.dataset.tag.toLowerCase());
+      paintTagRows(kind); hideOptions(kind); update();
+      root.querySelector(`[data-tag-input="${kind}"]`)?.focus();
     }
     if (remove) {
       selected[remove.dataset.removeTag] = selected[remove.dataset.removeTag].filter((tag) => tag !== remove.dataset.tag);
-      paintChips(remove.dataset.removeTag); paintOptions(remove.dataset.removeTag); update();
+      paintTagRows(remove.dataset.removeTag); hideOptions(remove.dataset.removeTag); update();
     }
     if (event.target.closest('[data-clear-filters]')) {
       root.querySelectorAll('[data-filter]').forEach((control) => { control.value = control.dataset.filter === 'order' ? 'new' : ''; });
       selected.include = []; selected.exclude = [];
-      paintChips('include'); paintChips('exclude'); paintOptions('include'); paintOptions('exclude'); update();
+      paintTagRows('include'); paintTagRows('exclude'); hideOptions('include'); hideOptions('exclude'); update();
     }
   });
+  const panel = root.querySelector('[data-filter-panel]');
+  const panelHost = root.querySelector('[data-filter-panel-host]');
+  const dialog = root.querySelector('[data-filter-dialog]');
+  const dialogMount = root.querySelector('[data-filter-dialog-mount]');
+  let mobileBackup;
+  const restore = (snapshot) => {
+    for (const [name, value] of Object.entries(snapshot.controls)) input(name).value = value;
+    selected.include = [...snapshot.include]; selected.exclude = [...snapshot.exclude];
+    paintTagRows('include'); paintTagRows('exclude'); update();
+  };
+  root.querySelector('[data-mobile-filter-open]').addEventListener('click', () => {
+    mobileBackup = { controls: { text: input('text').value, before: input('before').value, after: input('after').value, order: input('order').value, 'articles-only': input('articles-only').value }, include: [...selected.include], exclude: [...selected.exclude] };
+    dialogMount.append(panel);
+    dialog.showModal();
+  });
+  root.querySelector('[data-filter-apply]').addEventListener('click', () => dialog.close('apply'));
+  root.querySelector('[data-filter-cancel]').addEventListener('click', () => dialog.close('cancel'));
+  dialog.addEventListener('cancel', (event) => { event.preventDefault(); dialog.close('cancel'); });
+  dialog.addEventListener('click', (event) => {
+    const bounds = root.querySelector('[data-filter-dialog-surface]').getBoundingClientRect();
+    if (event.target === dialog && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) dialog.close('apply');
+  });
+  dialog.addEventListener('close', () => {
+    panelHost.append(panel);
+    if (dialog.returnValue === 'cancel' && mobileBackup) restore(mobileBackup);
+    mobileBackup = null;
+  });
+  paintTagRows('include'); paintTagRows('exclude');
   update();
 }
 
@@ -429,8 +489,9 @@ function migrateLegacyHashRoute() {
   }
 }
 
-function searchableEntries(query) {
-  return rankMetadataResults(articles, (article) => categoryById(article.category)?.name ?? '', query).map(({ entry }) => entry);
+async function fullSearchResults(query) {
+  const pagefindIds = import.meta.env.DEV ? null : await searchPagefindEntryIds(query);
+  return rankFullSearchResults(articles, (article) => categoryById(article.category)?.name ?? '', query, pagefindIds);
 }
 
 let searchRequest = 0;
@@ -442,18 +503,25 @@ async function search(query) {
     return;
   }
   dialogResults.innerHTML = '<div class="empty-state"><strong>Searching…</strong></div>';
-  const pagefindIds = import.meta.env.DEV ? null : await searchPagefindEntryIds(term);
+  const matches = await fullSearchResults(term);
   if (request !== searchRequest) return;
-  const matches = rankFullSearchResults(articles, (article) => categoryById(article.category)?.name ?? '', term, pagefindIds);
-  dialogResults.innerHTML = matches.length ? matches.map(({ entry, bodyContext: context }) => `<div class="dialog-result"><button type="button" data-search-result="${entry.id}">${thumb(entry)}<span class="result-meta">${esc(categoryById(entry.category)?.short ?? 'Archive')} · ${entry.date ? formatDate(entry.date) : 'Unpublished'}</span><strong>${esc(entry.title)}</strong><p>${esc(context?.text ?? entry.subtitle)}</p></button></div>`).join('') : '<div class="empty-state"><strong>No result yet.</strong>Try a track, part, technique or repair.</div>';
+  dialogResults.innerHTML = matches.length ? matches.map(({ entry, bodyContext: context }) => {
+    const categoryName = categoryById(entry.category)?.short ?? 'Archive';
+    const contextMarkup = context ? `<p class="result-context">${highlightedSearchText(context.text, term)}</p>` : '';
+    return `<div class="dialog-result"><button type="button" data-search-result="${entry.id}">${thumb(entry)}<span class="result-meta">${highlightedSearchText(categoryName, term)} · ${esc(entry.date ? formatDate(entry.date) : 'Unpublished')}</span><strong>${highlightedSearchText(entry.title, term)}</strong><p class="result-subtitle">${highlightedSearchText(entry.subtitle, term)}</p>${contextMarkup}</button></div>`;
+  }).join('') : '<div class="empty-state"><strong>No result yet.</strong>Try a track, part, technique or repair.</div>';
 }
 
 let suggestionTimer;
-function updateGlobalSuggestions() {
-  const matches = searchableEntries(globalInput.value).slice(0, 5);
+let suggestionRequest = 0;
+async function updateGlobalSuggestions() {
+  const request = ++suggestionRequest;
+  const term = globalInput.value.trim();
+  const matches = term ? (await fullSearchResults(term)).slice(0, 5) : [];
+  if (request !== suggestionRequest) return;
   globalSuggestions.hidden = matches.length === 0;
   globalInput.setAttribute('aria-expanded', String(matches.length > 0));
-  globalSuggestions.innerHTML = matches.map((article) => `<button class="search-suggestion" type="button" data-suggestion="${article.id}" role="option">${esc(article.title)}</button>`).join('');
+  globalSuggestions.innerHTML = matches.map(({ entry }) => `<button class="search-suggestion" type="button" data-suggestion="${entry.id}" role="option">${highlightedSearchText(entry.title, term)}</button>`).join('');
 }
 
 function openSearch(initial = '') {
@@ -562,9 +630,12 @@ document.addEventListener('keydown', (event) => {
 document.querySelector('#global-search').addEventListener('submit', (event) => { event.preventDefault(); openSearch(globalInput.value); });
 globalInput.addEventListener('input', () => {
   clearTimeout(suggestionTimer);
+  suggestionRequest += 1;
+  globalSuggestions.hidden = true;
+  globalInput.setAttribute('aria-expanded', 'false');
   suggestionTimer = setTimeout(updateGlobalSuggestions, 500);
 });
-globalInput.addEventListener('blur', () => setTimeout(() => { globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); }, 150));
+globalInput.addEventListener('blur', () => setTimeout(() => { suggestionRequest += 1; globalSuggestions.hidden = true; globalInput.setAttribute('aria-expanded', 'false'); }, 150));
 document.querySelector('#dialog-search-form').addEventListener('submit', (event) => { event.preventDefault(); search(dialogInput.value); });
 dialogInput.addEventListener('input', () => search(dialogInput.value));
 document.querySelector('#search-dialog-close').addEventListener('click', () => dialog.close());

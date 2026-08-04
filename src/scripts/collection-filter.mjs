@@ -5,13 +5,23 @@ export function filtersAreActive(filters) {
 }
 
 export function tagOptions(entries) {
-  return [...new Set(entries.flatMap((entry) => entry.tags ?? []).map(String))].sort((a, b) => a.localeCompare(b));
+  const counts = new Map();
+  for (const tag of entries.flatMap((entry) => entry.tags ?? []).map((value) => String(value).toLowerCase())) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  return [...counts].sort(([leftTag, leftCount], [rightTag, rightCount]) => rightCount - leftCount || leftTag.localeCompare(rightTag)).map(([tag]) => tag);
+}
+
+export function tagSuggestions({ options, includeTags, excludeTags, selectedKind, query = '', limit = 5 }) {
+  const selected = selectedKind === 'include' ? includeTags : excludeTags;
+  if (selected.length >= limit) return [];
+  const unavailable = new Set([...includeTags, ...excludeTags].map((tag) => String(tag).toLowerCase()));
+  const term = query.trim().toLowerCase();
+  return options.filter((tag) => !unavailable.has(tag) && (!term || tag.includes(term))).slice(0, limit);
 }
 
 export function filterCollection({ direct, descendants, filters }) {
   const candidates = filtersAreActive(filters) ? descendants : direct;
   const filtered = candidates.filter((entry) => {
-    const entryTags = (entry.tags ?? []).map(String);
+    const entryTags = (entry.tags ?? []).map((tag) => String(tag).toLowerCase());
     const haystack = [entry.title, entry.subtitle, entry.type, ...entryTags].join(' ').toLowerCase();
     const isArticle = entry.hasArticle !== false;
     if (filters.text && !haystack.includes(filters.text.toLowerCase())) return false;

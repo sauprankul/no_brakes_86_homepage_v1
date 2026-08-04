@@ -4,6 +4,7 @@ import YAML from 'yaml';
 import { renderArticleMarkdown } from './content-compiler.mjs';
 import { directCategoryChildren, rootCategoryId } from './content-hierarchy.mjs';
 import { contentPath } from './content-routes.mjs';
+import { authorFingerprint, authorFingerprints, changedAuthorDirectories, changedSources, contentChangeLog, contentSnapshot, watchedSourceKind } from './content-watch.mjs';
 import { visibleCategories, visibleEntries } from './content-index-visibility.mjs';
 import { generateSizedMedia, IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
 import { contentRoot as defaultContentRoot, publicRoot } from './project-paths.mjs';
@@ -14,6 +15,8 @@ const outputFile = path.join(outputRoot, 'content-index.json');
 const isWatchMode = process.argv.includes('--watch');
 const includeDrafts = process.argv.includes('--include-drafts');
 const touchUpdates = process.argv.includes('--touch-updates');
+const requestedUpdateInterval = Number(process.env.NO_BRAKES_UPDATE_INTERVAL_MS ?? 60_000);
+const updateIntervalMs = Number.isFinite(requestedUpdateInterval) && requestedUpdateInterval > 0 ? requestedUpdateInterval : 60_000;
 
 const now = () => new Date().toISOString();
 const legacyDateTimestamp = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '') ? `${value}T00:00:00.000Z` : value;
@@ -109,8 +112,8 @@ function slugFrom(file) {
   return path.relative(contentRoot, path.dirname(file)).replaceAll(path.sep, '/').replace(/\/(config|_node)$/i, '');
 }
 
-async function build() {
-  if (isWatchMode && includeDrafts) {
+async function build({ prepareMedia = false } = {}) {
+  if (prepareMedia) {
     try {
       await generateSizedMedia(contentRoot);
     } catch (error) {
@@ -199,49 +202,61 @@ async function build() {
   console.log(`Content index built: ${articles.length} ${includeDrafts ? 'preview' : 'published'} node(s).`);
 }
 
-await build();
+await build({ prepareMedia: isWatchMode && includeDrafts });
 
 if (isWatchMode) {
-  console.log('Watching Content for authoring updates…');
+  console.log('Watching Content for authoring updates...');
   let buildTimer;
+  let sourceSnapshot = await contentSnapshot(contentRoot);
+  const timestampFingerprints = authorFingerprints(sourceSnapshot);
   const changedNodes = new Set();
   const selfWrites = new Map();
+  let work = Promise.resolve();
+  const enqueue = (task) => {
+    work = work.then(task).catch((error) => console.error(error));
+  };
   const refresh = () => {
     clearTimeout(buildTimer);
-    buildTimer = setTimeout(() => build().catch((error) => console.error(error)), 150);
-  };
-  const nodeDirectoryFor = async (file) => {
-    let directory = path.dirname(file);
-    while (directory.startsWith(contentRoot)) {
-      if (await exists(path.join(directory, 'config.yaml'))) return directory;
-      const parent = path.dirname(directory);
-      if (parent === directory) break;
-      directory = parent;
-    }
-    return null;
+    buildTimer = setTimeout(() => enqueue(async () => {
+      const nextSnapshot = await contentSnapshot(contentRoot, sourceSnapshot);
+      const changes = changedSources(sourceSnapshot, nextSnapshot);
+      if (!changes.length) return;
+      sourceSnapshot = nextSnapshot;
+      for (const directory of changedAuthorDirectories(changes)) changedNodes.add(directory);
+      console.log(`Content changes detected; rebuilding:\n${contentChangeLog(changes)}`);
+      await build({ prepareMedia: changes.some((change) => change.kind === 'media') });
+    }), 150);
   };
   const flushUpdates = async () => {
     if (!touchUpdates || changedNodes.size === 0) return;
-    const directories = [...changedNodes];
+    const directories = [...changedNodes].filter((directory) => authorFingerprint(sourceSnapshot, directory) !== timestampFingerprints.get(directory));
     changedNodes.clear();
+    if (!directories.length) return;
     await Promise.all(directories.map(async (directory) => {
-      const configFile = path.join(directory, 'config.yaml');
+      const configFile = path.join(contentRoot, directory, 'config.yaml');
       const config = await readYaml(configFile);
       config.updated_at = now();
-      selfWrites.set(configFile, Date.now() + 5_000);
+      selfWrites.set(path.resolve(configFile).toLowerCase(), Date.now() + 5_000);
       await writeYaml(configFile, config);
+      timestampFingerprints.set(directory, authorFingerprint(sourceSnapshot, directory));
     }));
-    refresh();
+    console.log(`Authored content timestamps updated; rebuilding:\n${directories.map((directory) => `  - Content/${directory ? `${directory}/` : ''}config.yaml`).join('\n')}`);
+    const timestampConfigPaths = new Set(directories.map((directory) => `${directory ? `${directory}/` : ''}config.yaml`.toLowerCase()));
+    const nextSnapshot = await contentSnapshot(contentRoot, sourceSnapshot);
+    const concurrentChanges = changedSources(sourceSnapshot, nextSnapshot).filter((change) => !timestampConfigPaths.has(change.path.toLowerCase()));
+    sourceSnapshot = nextSnapshot;
+    for (const directory of changedAuthorDirectories(concurrentChanges)) changedNodes.add(directory);
+    if (concurrentChanges.length) console.log(`Content changes detected; rebuilding:\n${contentChangeLog(concurrentChanges)}`);
+    await build({ prepareMedia: concurrentChanges.some((change) => change.kind === 'media') });
   };
-  const updateTimer = setInterval(() => flushUpdates().catch((error) => console.error(error)), 60_000);
+  const updateTimer = setInterval(() => enqueue(flushUpdates), updateIntervalMs);
   process.once('SIGINT', () => clearInterval(updateTimer));
   process.once('SIGTERM', () => clearInterval(updateTimer));
   const watcher = watch(contentRoot, { recursive: true });
   for await (const event of watcher) {
     const file = path.join(contentRoot, String(event.filename));
-    if ((selfWrites.get(file) ?? 0) > Date.now()) continue;
-    const directory = await nodeDirectoryFor(file);
-    if (directory) changedNodes.add(directory);
+    if ((selfWrites.get(path.resolve(file).toLowerCase()) ?? 0) > Date.now()) continue;
+    if (event.filename && !watchedSourceKind(path.relative(contentRoot, file))) continue;
     refresh();
   }
 }
