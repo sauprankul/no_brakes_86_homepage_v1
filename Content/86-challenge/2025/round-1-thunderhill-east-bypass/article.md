@@ -17,4 +17,4 @@
 
 ## Fastest Lap Onboard
 
-<iframe class="article-video" src="https://www.youtube-nocookie.com/embed/4MzVu1bhn0I" title="Saurabh Kulkarni's fastest lap — 2025 Round 1, Thunderhill East Bypass" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<iframe class="article-video" src="https://www.youtube-nocookie.com/embed/4MzVu1bhn0I" title="Saurabh Kulkarni's fastest lap — 2025 Round 1, Thunderhill East Bypass" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>

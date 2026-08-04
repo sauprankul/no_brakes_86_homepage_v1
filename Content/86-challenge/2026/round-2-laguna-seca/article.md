@@ -17,7 +17,7 @@
 
 ## Fastest Lap Onboard
 
-<iframe class="article-video" src="https://www.youtube-nocookie.com/embed/BJz-tZLaszs" title="Saurabh Kulkarni's fastest lap — 2026 Round 2, Laguna Seca" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<iframe class="article-video" src="https://www.youtube-nocookie.com/embed/BJz-tZLaszs" title="Saurabh Kulkarni's fastest lap — 2026 Round 2, Laguna Seca" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
 
 ## Summary
 

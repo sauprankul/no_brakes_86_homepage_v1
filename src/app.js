@@ -215,8 +215,8 @@ function renderHome() {
   main.innerHTML = `
     <section class="hero">
       <div>
-        <p class="eyebrow">86 / BRZ PERFORMANCE REFERENCE</p>
-        <h1>Every lap, repair<br />and bad idea—<em>kept useful.</em></h1>
+        <p class="eyebrow">Let my Ls be your Ws</p>
+        <h1>Everything I know about the Toyobaru platform and NorCal tracks <em>distilled</em></h1>
         <div class="hero__rule"></div>
       </div>
       <div>
