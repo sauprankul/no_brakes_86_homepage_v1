@@ -2,10 +2,17 @@ node_type: article
 id: ca-tire-efficiency-regulation
 parent: blog
 title: CA Tire Efficiency Regulation
-subtitle: ''
+subtitle: My stance against the CEC's restriction of "high" rolling resistance tires
 content_type: Blog
-published: false
-published_at: null
-updated_at: null
-tags: [california, tires]
+published: true
+published_at: 2026-08-27T07:21:16.196Z
+updated_at: 2026-08-27T07:25:19.351Z
+tags:
+  - california
+  - tires
+  - tire-efficiency
+  - rolling-resistance
+  - fuel-economy
+  - emissions
+  - regulation
 media_label: BLOG
