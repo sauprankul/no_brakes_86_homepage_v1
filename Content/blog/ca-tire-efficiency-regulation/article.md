@@ -44,9 +44,9 @@ Thus, manufacturers must NOT be unduly incentivized to remove plies from their t
 - Motorsport compounds cannot compete with OE tires in cold/wet conditions or in RR; sub-300tw tires should be exempted with clear consumer warnings.
 - Tires not exempted must maintain minimum puncture resistance; deleting plies to meet RR targets will enrich companies while burdening and endangering Californians.
 
-Thank you for your consideration,
-Saurabh Kulkarni
-86challenge.us
+Thank you for your consideration,  
+Saurabh Kulkarni  
+86challenge.us  
 
 ### Reference list
 
