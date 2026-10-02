@@ -15,6 +15,10 @@
 | 4 | Brandon Stitt | 2:10.040 | 2:12.540 | +2.354 |
 | 5 | Aris Perez | 2:10.620 | 2:13.120 | +2.934 |
 
+## Recap Video
+
+<iframe class="article-video" src="https://www.youtube-nocookie.com/embed/UGz68KyeXwI" title="Recap: Round 7, Thunderhill East" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+
 ## Fastest Lap Onboard
 
 <iframe class="article-video" src="https://www.youtube-nocookie.com/embed/H3lLhGAbl9M" title="Saurabh Kulkarni's fastest lap — 2026 Round 7, Thunderhill East Bypass" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>

@@ -15,6 +15,10 @@
 | 4 | Aris Perez | 1:56.889 | 1:59.389 | +1.887 |
 | 5 | Andrew Deinega | 1:57.896 | 2:00.396 | +2.894 |
 
+## Recap Video
+
+<iframe class="article-video" src="https://www.youtube-nocookie.com/embed/5SHHNijln60" title="Recap: Round 6, Sonoma" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+
 ## Fastest Lap Onboard
 
 <iframe class="article-video" src="https://www.youtube-nocookie.com/embed/mBIWE3-tVfM" title="Saurabh Kulkarni's fastest lap — 2026 Round 6, Sonoma" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
