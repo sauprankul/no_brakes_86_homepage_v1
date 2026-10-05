@@ -188,7 +188,7 @@ main { max-width: 1500px; margin: 0 auto; padding: clamp(26px, 5vw, 76px) clamp(
 .dev-publish__toggle.is-published { color: #e2ffe9; background: #2f8f5b; border-color: #69c995; }
 .dev-publish__toggle:disabled { cursor: wait; opacity: .72; }
 .article-layout { display: grid; grid-template-columns: minmax(0, 1fr) 255px; gap: 56px; padding-top: 26px; border-top: 1px solid var(--line); }
-.article-body { max-width: 780px; }
+.article-body { min-width: 0; width: 100%; max-width: 780px; }
 .article-markdown > :first-child { margin-top: 0; }
 .article-markdown h1 { margin: 0 0 20px; color: #f5f6f7; font-size: clamp(2.3rem, 5vw, 4.7rem); font-weight: 850; letter-spacing: -.065em; line-height: .94; }
 .article-body h2 { margin: 32px 0 9px; color: #f2f4f5; font-size: 1.15rem; }
