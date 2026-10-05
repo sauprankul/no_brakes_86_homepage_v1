@@ -1,10 +1,10 @@
-import { access, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import ffmpegPath from 'ffmpeg-static';
 import ffprobeStatic from 'ffprobe-static';
+import convertHeic from 'heic-convert';
 import sharp from 'sharp';
 
 export const IMAGE_EXTENSIONS = new Set(['.heic', '.heif', '.jpeg', '.jpg', '.png']);
@@ -107,30 +107,12 @@ async function convertImageInput(input, source, destination) {
 }
 
 async function convertHeifFallback(source, destination, sharpError) {
-  const directory = await mkdtemp(path.join(tmpdir(), 'no-brakes-heif-'));
-  const decoded = path.join(directory, 'decoded.jpg');
   try {
-    await run(await heifConvertCommand(), [source, decoded]);
+    const decoded = await convertHeic({ buffer: await readFile(source), format: 'JPEG', quality: 0.9 });
     await convertImageInput(sharp(decoded, { limitInputPixels: 100_000_000 }).rotate(), source, destination);
   } catch (fallbackError) {
-    throw new Error(`${toPosix(source)}: Sharp could not decode this HEIF (${sharpError.message}). The heif-convert fallback also failed: ${fallbackError.message}`);
-  } finally {
-    await rm(directory, { recursive: true, force: true });
+    throw new Error(`${toPosix(source)}: Sharp could not decode this HEIF (${sharpError.message}). The bundled HEIC fallback also failed: ${fallbackError.message}`);
   }
-}
-
-async function heifConvertCommand() {
-  const name = process.platform === 'win32' ? 'heif-convert.exe' : 'heif-convert';
-  for (const directory of (process.env.PATH ?? '').split(path.delimiter).filter(Boolean)) {
-    const direct = path.join(directory, name);
-    if (await exists(direct)) return direct;
-    if (process.platform === 'win32') {
-      const wrapper = path.join(directory, 'heif-convert.cmd');
-      const bundled = path.resolve(directory, '..', '..', 'native', 'libheif', 'libheif', 'bin', 'heif-convert.exe');
-      if (await exists(wrapper) && await exists(bundled)) return bundled;
-    }
-  }
-  return name;
 }
 
 async function convertVideo(source, destination) {

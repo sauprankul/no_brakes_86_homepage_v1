@@ -33,6 +33,7 @@
     "ffmpeg-static": "^5.2.0",
     "ffprobe-static": "^3.1.0",
     "globals": "^17.8.0",
+    "heic-convert": "^2.1.0",
     "markdownlint-cli2": "^0.23.2",
     "marked": "^15.0.7",
     "pagefind": "^1.5.2",
