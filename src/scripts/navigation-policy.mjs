@@ -9,7 +9,7 @@ export function clickAction({ hasChildren, expanded }) {
 }
 
 export function isWidescreen(viewportWidth, viewportHeight) {
-  return viewportWidth / viewportHeight >= 16 / 9;
+  return viewportWidth >= 1024 && viewportWidth / viewportHeight >= 16 / 9;
 }
 
 export function shouldDismissSidebar({ wide, clickedInsideSidebar, clickedToggle }) {

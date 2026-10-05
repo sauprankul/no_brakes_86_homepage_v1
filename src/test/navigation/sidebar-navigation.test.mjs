@@ -45,6 +45,7 @@ test('a parent expands first, lists only five children, then opens when already 
 test('widescreen navigation stays persistent and narrow navigation dismisses on outside click', () => {
   assert.equal(isWidescreen(1600, 900), true);
   assert.equal(isWidescreen(390, 844), false);
+  assert.equal(isWidescreen(874, 402), false);
   assert.equal(shouldDismissSidebar({ wide: false, clickedInsideSidebar: false, clickedToggle: false }), true);
   assert.equal(shouldDismissSidebar({ wide: true, clickedInsideSidebar: false, clickedToggle: false }), false);
   assert.equal(shouldDismissSidebar({ wide: false, clickedInsideSidebar: true, clickedToggle: false }), false);
