@@ -215,13 +215,11 @@ function renderHome() {
   main.innerHTML = `
     <section class="hero">
       <div>
-        <p class="eyebrow">Let my Ls be your Ws</p>
         <h1>Everything I know about the Toyobaru platform and NorCal tracks <em>distilled</em></h1>
         <div class="hero__rule"></div>
       </div>
       <div>
         <p class="hero__copy">A searchable, long-form record for the work behind 86 Challenge. Video lives on YouTube; the evidence, context and notes live here.</p>
-        <div class="hero__note"><strong>${articles.length}</strong><span>${import.meta.env.DEV ? 'entries in local preview' : 'published entries'}</span></div>
       </div>
     </section>
 
