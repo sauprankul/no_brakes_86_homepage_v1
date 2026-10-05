@@ -5,7 +5,9 @@
       "label": "No Brakes: live authoring preview",
       "type": "npm",
       "script": "dev",
-      "options": { "cwd": "${workspaceFolder}/src" },
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      },
       "isBackground": true,
       "problemMatcher": []
     },
@@ -13,7 +15,19 @@
       "label": "No Brakes: production build",
       "type": "npm",
       "script": "build",
-      "options": { "cwd": "${workspaceFolder}/src" },
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "No Brakes: live authoring preview",
+      "type": "npm",
+      "script": "dev",
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      },
+      "isBackground": true,
       "problemMatcher": []
     }
   ]
