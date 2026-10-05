@@ -234,13 +234,6 @@ function renderHome() {
         <div class="feed-head"><h2>Hot</h2><span>Start here</span></div>
         <div class="article-list">${hotItems.map((article) => articleRow(article)).join('')}</div>
       </section>
-    </section>
-
-    <section class="quick-browse" aria-labelledby="browse-title">
-      <div class="section-head"><h2 id="browse-title">Browse the archive</h2><span class="quiet-link">Select a discipline</span></div>
-      <div class="category-cards">
-        ${categories.map((category, index) => `<button class="category-card" type="button" data-category="${category.id}"><span class="category-card__number">0${index + 1}</span><span class="category-card__name">${esc(category.name)}</span><span class="category-card__count">${category.count} starter entries</span></button>`).join('')}
-      </div>
     </section>`;
   renderTree();
 }
