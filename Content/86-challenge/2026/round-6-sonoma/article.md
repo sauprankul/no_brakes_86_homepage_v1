@@ -27,7 +27,7 @@
 
 I'm somehow in the running for the championship. I just have to win literally every single remaining round. That's a fun mindset to have when TTing at one of the most dangerous tracks in the west.
 
-A few other guys have started delaminated/chunking the outer edges on their V601s after 5 rounds. I know I need my tires to last the remainder of the year, and my first lap of the session is when the V601s have the most grip... so I go out in the first session with a ridiculous 35 psi cold. 
+A few other guys have started delaminated/chunking the outer edges on their V601s after 5 rounds. I know I need my tires to last the remainder of the year, and my first lap of the session is when the V601s have the most grip... so I go out in the first session with a ridiculous 35 psi cold.
 
 That quickly turns into 41 psi hot, at which point the car turns great (surprisingly) but doesn't stop at all.
 

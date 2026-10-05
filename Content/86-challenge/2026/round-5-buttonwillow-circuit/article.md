@@ -39,6 +39,3 @@ T7: Pretty decent, slight boot-shaped release because I over sped but a bit of e
 T8: Terrible, lost 0.4 here. car is just too oversteery on the brakes. 6 seconds of low tire util because I'm braking and turning for so long. Hoping stock brake bias prevents something like from happening again. Low braking efficiency also made me blow past the turn-in and acceleration point, requiring me to finish the rotation after getting on throttle. Really poor exit.
 T9: Low brake aggression, but decent.
 T10: Early/shallow turn-in. Had to lift to get the car back on the proper line. Lost 0.15 here.
-
-
-

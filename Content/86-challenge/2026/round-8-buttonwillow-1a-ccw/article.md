@@ -20,6 +20,7 @@
 ## Summary
 
 ### Setup saga
+
 We're back after a long, long summer break. This season, the car has just been too snappy on throttle for me to drive it confidently. I've tried:
 
 - Reducing camber to -1.5 to improve longitudinal traction
@@ -43,7 +44,7 @@ The last one is what I suspect made the biggest difference. I tested the 14mm ba
 
 If you just watch my best lap above (P1 by 0.3s by the way), you'll probably feel that it looks like a sunday cruise. And it is - I'm losing time in many braking zones, but the idea is to build a car that makes a decent lap easy. If I can get within 0.5s of a top tier lap without risking a spin or off, that makes it easier to find that last 0.5s on my own time.
 
-It's a bit humbling to "neuter" the car because I'm incapable of handling it. But I've spent a long time punishing myself for not being good enough, and honestly, it's about time I started being kinder to myself. I'm clearly faster with a more tame car, and I definitely had more fun. 
+It's a bit humbling to "neuter" the car because I'm incapable of handling it. But I've spent a long time punishing myself for not being good enough, and honestly, it's about time I started being kinder to myself. I'm clearly faster with a more tame car, and I definitely had more fun.
 
 ### Lap analysis vs Ivan
 
