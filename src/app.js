@@ -214,11 +214,12 @@ function renderHome() {
   main.innerHTML = `
     <section class="hero">
       <div>
-        <h1>Welcome! If you have an 86/BRZ and want to drive it fast, you're in the right place.</h1>
+        <h1>Have an 86? Want to drive fast?<br><em>You're in the right place.</em></h1>
         <div class="hero__rule"></div>
       </div>
       <div>
         <p class="hero__copy">In 4 years, I've broken almost every single part of this car - the engine, the transmission, the steering rack, the brakes, the suspension. Uncountable sets of tires. I've done a lot of dumb, expensive stuff, but I've also won TTs, set records and generally gotten pretty good at driving.<br><br>I was tired of how inaccessible good information was online, so I built this website to help other Toyobaru owners get up to speed the easy way. No AI content, no paywalls, no ads, no dropshipped merch, no paid courses. Just sauce.</p>
+        <a class="hero__about" href="/about">More about why I made this <span aria-hidden="true">↗</span></a>
       </div>
     </section>
 
