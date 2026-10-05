@@ -10,6 +10,10 @@ if (!files.length) {
 }
 
 const cli = path.join(appRoot, 'node_modules', 'markdownlint-cli2', 'markdownlint-cli2-bin.mjs');
-const result = spawnSync(process.execPath, [cli, '--no-globs', ...files], { stdio: 'inherit', shell: false });
+const result = spawnSync(process.execPath, [cli, '--no-globs', ...files], {
+  cwd: appRoot,
+  stdio: 'inherit',
+  shell: false,
+});
 if (result.error) console.error(`Could not launch Markdown lint: ${result.error.message}`);
 process.exitCode = result.status ?? 1;

@@ -58,7 +58,7 @@ export function renderArticleMarkdown(markdown, nodeId, entryPath = `/${nodeId}`
     if (depth >= 2 && depth <= 3) headings.push({ id, text, depth });
     return `<h${depth} id="${id}">${html}</h${depth}>\n`;
   };
-  const unsafeHtml = marked.parse(markdown, { renderer, gfm: true });
+  const unsafeHtml = marked.parse(markdown, { breaks: true, renderer, gfm: true });
   const safeHtml = sanitizeHtml(unsafeHtml, {
     allowedTags: [...sanitizeHtml.defaults.allowedTags, 'img', 'h1', 'h2', 'h3', 'iframe', 'source', 'track', 'video'],
     allowedAttributes: {

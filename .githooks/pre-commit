@@ -1,2 +1,5 @@
 #!/bin/sh
+set -eu
+
 node src/scripts/generate-sized-media.mjs --stage
+node src/scripts/lint-published-markdown.mjs

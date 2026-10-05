@@ -41,3 +41,10 @@ test('wraps every authored Markdown table for the shared responsive table presen
   assert.match(rendered.html, /<th>Pos\.<\/th>/);
   assert.match(rendered.html, /<td>Ivan Larionov<\/td>/);
 });
+
+test('renders plain-text soft line breaks without changing code blocks or tables', () => {
+  const rendered = renderArticleMarkdown('T4: Overslow.\nT5: Carry more speed.\n\n```text\nline one\nline two\n```\n\n| Corner | Note |\n| --- | --- |\n| T6 | Earlier throttle |', 'notes');
+  assert.match(rendered.html, /<p>T4: Overslow\.<br\s*\/?\s*>T5: Carry more speed\.<\/p>/);
+  assert.match(rendered.html, /<pre><code class="language-text">line one\nline two\n<\/code><\/pre>/);
+  assert.match(rendered.html, /<td>Earlier throttle<\/td>/);
+});
