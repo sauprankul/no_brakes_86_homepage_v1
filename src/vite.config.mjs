@@ -11,6 +11,11 @@ async function readJson(request) {
 
 export default defineConfig({
   publicDir: process.env.NO_BRAKES_PUBLIC_DIR ?? resolve(import.meta.dirname, 'public'),
+  server: {
+    watch: {
+      ignored: ['**/public/**/downloads/**'],
+    },
+  },
   plugins: [{
     name: 'content-index-refresh',
     configureServer(server) {
