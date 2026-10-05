@@ -31,5 +31,5 @@ I was able to end the day just 3 tenths off Ivan, and set a PB by a massive 4 te
 
 ## Downloads
 
-[AIM XRK Data](./Downloads/best_lap_aim_s5.xrk)
-[AIM CSV Data](./Downloads/best_lap_aim_s5.csv)
+[AIM XRK Data - Session 5](./Downloads/aim_session_5.xrk)
+[AIM CSV Data - Session 5](./Downloads/aim_session_5.csv)

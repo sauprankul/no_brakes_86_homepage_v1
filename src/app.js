@@ -206,7 +206,6 @@ function setBreadcrumb(parts) {
 
 function renderHome() {
   const newItems = [...articles].sort((a, b) => (b.date ?? b.updatedAt ?? '').localeCompare(a.date ?? a.updatedAt ?? '')).slice(0, 5);
-  const hotItems = articles.filter((article) => article.featured === 'hot').slice(0, 5);
   state.category = null;
   state.article = null;
   state.treeRoot = null;
@@ -215,23 +214,17 @@ function renderHome() {
   main.innerHTML = `
     <section class="hero">
       <div>
-        <h1>Everything I know about the Toyobaru platform and NorCal tracks <em>distilled</em></h1>
+        <h1>Welcome! If you have an 86/BRZ and want to drive it fast, you're in the right place.</h1>
         <div class="hero__rule"></div>
       </div>
       <div>
-        <p class="hero__copy">A searchable, long-form record for the work behind 86 Challenge. Video lives on YouTube; the evidence, context and notes live here.</p>
+        <p class="hero__copy">In 4 years, I've broken almost every single part of this car - the engine, the transmission, the steering rack, the brakes, the suspension. Uncountable sets of tires. I've done a lot of dumb, expensive stuff, but I've also won TTs, set records and generally gotten pretty good at driving.<br><br>I was tired of how inaccessible good information was online, so I built this website to help other Toyobaru owners get up to speed the easy way. No AI content, no paywalls, no ads, no dropshipped merch, no paid courses. Just sauce.</p>
       </div>
     </section>
 
-    <section class="feed-grid" aria-label="Article feeds">
-      <section class="feed">
-        <div class="feed-head"><h2>New</h2><span>Latest published notes</span></div>
-        <div class="article-list">${newItems.map((article) => articleRow(article)).join('')}</div>
-      </section>
-      <section class="feed">
-        <div class="feed-head"><h2>Hot</h2><span>Start here</span></div>
-        <div class="article-list">${hotItems.map((article) => articleRow(article)).join('')}</div>
-      </section>
+    <section class="feed" aria-label="Latest published notes">
+      <div class="feed-head"><h2>New</h2></div>
+      <div class="article-list">${newItems.map((article) => articleRow(article)).join('')}</div>
     </section>`;
   renderTree();
 }

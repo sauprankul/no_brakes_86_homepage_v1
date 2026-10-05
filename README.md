@@ -18,7 +18,7 @@ Use Node.js 22.12.0 or newer (the project pins it in `.nvmrc`). In VS Code, task
 
 - Dark, graphite and sunflower-yellow visual system.
 - A persistent, collapsible navigation tree.
-- Responsive New and Hot feeds.
+- Responsive New feed.
 - Search and category filters that work entirely in the browser, without an API.
 - Article shells that deliberately contain no AI-written technical content.
 - Local Markdown + per-node YAML metadata, including preserved publish and updated dates.
