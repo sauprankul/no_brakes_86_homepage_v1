@@ -17,6 +17,7 @@ const includeDrafts = process.argv.includes('--include-drafts');
 const touchUpdates = process.argv.includes('--touch-updates');
 const requestedUpdateInterval = Number(process.env.NO_BRAKES_UPDATE_INTERVAL_MS ?? 60_000);
 const updateIntervalMs = Number.isFinite(requestedUpdateInterval) && requestedUpdateInterval > 0 ? requestedUpdateInterval : 60_000;
+const retryableFilesystemCodes = new Set(['EACCES', 'EBUSY', 'ENOTEMPTY', 'EPERM']);
 
 const now = () => new Date().toISOString();
 const legacyDateTimestamp = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '') ? `${value}T00:00:00.000Z` : value;
@@ -37,6 +38,31 @@ async function readYaml(file) {
 
 async function exists(file) {
   return access(file).then(() => true).catch(() => false);
+}
+
+const pause = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function retryFilesystemOperation(operation) {
+  let error;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      return await operation();
+    } catch (caught) {
+      error = caught;
+      if (!retryableFilesystemCodes.has(caught?.code) || attempt === 4) throw caught;
+      await pause(50 * (attempt + 1));
+    }
+  }
+  throw error;
+}
+
+async function ensureDirectory(directory) {
+  await retryFilesystemOperation(() => mkdir(directory, { recursive: true }));
+}
+
+async function copyGeneratedFile(source, destination) {
+  await ensureDirectory(path.dirname(destination));
+  await retryFilesystemOperation(() => copyFile(source, destination));
 }
 
 async function findThumbnail(directory, nodeId, configured) {
@@ -71,8 +97,7 @@ async function copyDownloads(directory, entryPath) {
   const files = await filesIn(downloadsDirectory);
   await Promise.all(files.map(async (file) => {
     const destination = path.join(outputRoot, entryPath.replace(/^\/+/, ''), 'downloads', path.relative(downloadsDirectory, file));
-    await mkdir(path.dirname(destination), { recursive: true });
-    await copyFile(file, destination);
+    await copyGeneratedFile(file, destination);
   }));
 }
 
@@ -80,11 +105,11 @@ async function copySizedMedia(directory, nodeId) {
   const sizedDirectory = path.join(directory, 'SizedMedia');
   if (!await exists(sizedDirectory)) return;
   const files = await filesIn(sizedDirectory);
-  await Promise.all(files.filter((file) => path.basename(file) !== '.media-manifest.json').map(async (file) => {
-    const destination = path.join(outputRoot, 'media', nodeId, path.relative(sizedDirectory, file));
-    await mkdir(path.dirname(destination), { recursive: true });
-    await copyFile(file, destination);
-  }));
+  const destinationRoot = path.join(outputRoot, 'media', nodeId);
+  await ensureDirectory(destinationRoot);
+  for (const file of files.filter((candidate) => path.basename(candidate) !== '.media-manifest.json')) {
+    await copyGeneratedFile(file, path.join(destinationRoot, path.relative(sizedDirectory, file)));
+  }
 }
 
 async function writeYaml(file, value) {

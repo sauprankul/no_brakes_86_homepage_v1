@@ -1,9 +1,10 @@
 import { spawn } from 'node:child_process';
-import { cp, mkdir, readdir, rm } from 'node:fs/promises';
+import { cp, mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { appRoot, publicRoot } from './project-paths.mjs';
+import { publicRoot } from './project-paths.mjs';
 
-const productionPublicRoot = path.join(appRoot, '.production-public');
+const productionPublicRoot = await mkdtemp(path.join(tmpdir(), 'no-brakes-production-public-'));
 const generatedPublicEntries = new Set(['content-index.json', 'downloads', 'media']);
 
 function run(command, args, env = process.env) {
@@ -18,8 +19,6 @@ function run(command, args, env = process.env) {
 }
 
 async function prepareProductionPublic() {
-  await rm(productionPublicRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
-  await mkdir(productionPublicRoot, { recursive: true });
   const entries = await readdir(publicRoot, { withFileTypes: true });
   await Promise.all(entries.filter((entry) => !generatedPublicEntries.has(entry.name)).map((entry) => {
     return cp(path.join(publicRoot, entry.name), path.join(productionPublicRoot, entry.name), { recursive: entry.isDirectory() });

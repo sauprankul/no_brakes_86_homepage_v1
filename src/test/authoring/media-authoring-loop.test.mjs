@@ -17,6 +17,10 @@ test('authoring and pre-commit regenerate media when it is missing or stale', as
   assert.match(builder, /maxRetries: 10, retryDelay: 100/);
   assert.match(builder, /NO_BRAKES_PUBLIC_DIR/);
   assert.match(productionBuild, /NO_BRAKES_PUBLIC_DIR: productionPublicRoot/);
+  assert.match(productionBuild, /mkdtemp\(path\.join\(tmpdir\(\), 'no-brakes-production-public-'\)\)/);
   assert.match(hook, /generate-sized-media\.mjs --stage/);
   assert.match(await readFile(path.join(sourceRoot, 'scripts', 'media-pipeline.mjs'), 'utf8'), /convertHeifFallback\(source, destination, error\)/);
+  assert.match(await readFile(path.join(sourceRoot, 'scripts', 'build-content-index.mjs'), 'utf8'), /const destinationRoot = path\.join\(outputRoot, 'media', nodeId\);/);
+  assert.match(await readFile(path.join(sourceRoot, 'scripts', 'build-content-index.mjs'), 'utf8'), /await ensureDirectory\(destinationRoot\);/);
+  assert.match(await readFile(path.join(sourceRoot, 'scripts', 'build-content-index.mjs'), 'utf8'), /retryableFilesystemCodes = new Set\(\['EACCES', 'EBUSY', 'ENOTEMPTY', 'EPERM'\]\)/);
 });
