@@ -1,7 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-
-export const SITE_URL = 'https://nobrakes86.com';
+import { routeMetadata, SITE_URL } from './document-metadata.mjs';
 
 const SITE_NAME = 'No Brakes 86';
 const AUTHOR_NAME = 'Saurabh Kulkarni';
@@ -23,18 +22,6 @@ const xmlEscape = (value) => String(value ?? '').replace(/[&<>"']/g, (character)
 const absoluteUrl = (route = '/') => new URL(route, `${SITE_URL}/`).href;
 const jsonLd = (value) => JSON.stringify(value).replaceAll('<', '\\u003c');
 const normalizedPath = (value) => value === '/' ? '/' : `/${String(value ?? '').replace(/^\/+|\/+$/g, '')}`;
-const firstParagraph = (entry) => entry?.searchSections?.find((section) => section.kind === 'p')?.text ?? '';
-
-function concise(value, maximum = 200) {
-  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
-  if (text.length <= maximum) return text;
-  const shortened = text.slice(0, maximum + 1).replace(/\s+\S*$/, '').trim();
-  return `${shortened || text.slice(0, maximum).trim()}…`;
-}
-
-function descriptionFor(entry, fallback = HOME_DESCRIPTION) {
-  return concise(entry?.subtitle || entry?.intro || firstParagraph(entry) || fallback);
-}
 
 function directChildren(index, id) {
   return [...index.categories, ...index.articles].filter((entry) => entry.parent === id);
@@ -76,11 +63,8 @@ function websiteData() {
 }
 
 function pageMetadata(index, kind, entry) {
-  const route = kind === 'home' ? '/' : kind === 'about' ? '/about' : entry.path;
-  const url = absoluteUrl(route);
-  const title = kind === 'home' ? SITE_NAME : `${entry?.title || 'About'} | ${SITE_NAME}`;
-  const description = kind === 'home' ? HOME_DESCRIPTION : kind === 'about' ? descriptionFor(index.about) : descriptionFor(entry);
-  const image = entry?.thumbnail ? absoluteUrl(entry.thumbnail) : `${SITE_URL}/banner.jpg`;
+  const metadata = routeMetadata(kind, entry, index.about);
+  const { url, description, image } = metadata;
   const graph = [websiteData(), personData()];
 
   if (kind === 'article') {
@@ -103,7 +87,7 @@ function pageMetadata(index, kind, entry) {
     graph.push({ '@type': 'AboutPage', '@id': `${url}#webpage`, name: 'About', description, url, mainEntity: { '@id': `${SITE_URL}/#saurabh-kulkarni` }, isPartOf: { '@id': `${SITE_URL}/#website` } });
   }
 
-  return { route, url, title, description, image, type: kind === 'article' ? 'article' : 'website', graph };
+  return { ...metadata, graph };
 }
 
 function articleList(entries) {
@@ -125,7 +109,7 @@ function pageBody(index, kind, entry) {
 function renderDocument(template, metadata, body) {
   const extraHead = `
     <!-- seo:start -->
-    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <meta name="robots" content="${metadata.robots}" />
     <link rel="canonical" href="${htmlEscape(metadata.url)}" />
     <meta property="og:site_name" content="${SITE_NAME}" />
     <meta property="og:type" content="${metadata.type}" />
@@ -133,6 +117,9 @@ function renderDocument(template, metadata, body) {
     <meta property="og:description" content="${htmlEscape(metadata.description)}" />
     <meta property="og:url" content="${htmlEscape(metadata.url)}" />
     <meta property="og:image" content="${htmlEscape(metadata.image)}" />
+    <meta property="og:image:type" content="image/jpeg" />${metadata.imageWidth ? `
+    <meta property="og:image:width" content="${metadata.imageWidth}" />
+    <meta property="og:image:height" content="${metadata.imageHeight}" />` : ''}
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${htmlEscape(metadata.title)}" />
     <meta name="twitter:description" content="${htmlEscape(metadata.description)}" />

@@ -24,6 +24,13 @@ test('renders published routes as crawlable HTML with canonical metadata and Art
   assert.equal(pages.some((page) => page.route === '/racing/draft'), false);
 });
 
+test('renders the site logo as the home sharing image', () => {
+  const home = renderSeoPages(index, template).find((page) => page.route === '/');
+  assert.match(home.html, /property="og:image" content="https:\/\/nobrakes86\.com\/logo\.jpg"/);
+  assert.match(home.html, /property="og:image:width" content="1000"/);
+  assert.match(home.html, /property="og:image:height" content="665"/);
+});
+
 test('generates crawler policy and a published-route sitemap on the production domain', () => {
   const robots = robotsText();
   const sitemap = sitemapXml(index);

@@ -4,6 +4,7 @@ import { installClientLogBridge } from './scripts/client-log-bridge.mjs';
 import { selectContentIndex } from './scripts/content-index-client.mjs';
 import { entryRoutePath, normalizeRoutePath, resolveContentRoute } from './scripts/content-routes.mjs';
 import { devPublicationControlMarkup } from './scripts/dev-publish-view.mjs';
+import { routeMetadata, syncDocumentMetadata } from './scripts/document-metadata.mjs';
 import { hierarchyPath, navigationEntryClasses, parentFocus, rootIdForEntry, sidebarContext } from './scripts/sidebar-navigation.mjs';
 import { clickAction, isWidescreen, navigationChildren, shouldDismissSidebar, shouldInterceptInternalLink } from './scripts/navigation-policy.mjs';
 import { notFoundMarkup } from './scripts/not-found-view.mjs';
@@ -457,6 +458,7 @@ function route(resetScroll = true) {
   window.clearInterval(notFoundTimer);
   if (dialog.open) dialog.close();
   const target = resolveContentRoute(categories, articles, window.location.pathname);
+  syncDocumentMetadata(document, routeMetadata(target.type, target.entry, about, window.location.pathname));
   if (target.type === 'list') renderListPage(target.entry.id);
   else if (target.type === 'article') renderArticle(target.entry.id);
   else if (target.type === 'about') renderAbout();
