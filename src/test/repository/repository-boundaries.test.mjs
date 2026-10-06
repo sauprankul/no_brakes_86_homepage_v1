@@ -18,6 +18,7 @@ test('the author-facing repository root contains no visible application tooling'
     'LICENSE',
     'README.md',
     'Requirements',
+    'about',
     'agent.md',
     'src',
   ]);

@@ -40,9 +40,9 @@ a { color: inherit; text-decoration: none; }
 .app-shell.sidebar-collapsible .content-frame { margin-left: 0; }
 .app-shell.sidebar-collapsible .menu-button, .app-shell.sidebar-collapsible .sidebar__close { display: grid; }
 
-.sidebar__brand { display: flex; align-items: center; justify-content: space-between; height: 72px; padding: 0 22px; border-bottom: 1px solid var(--line); }
-.brand { display: inline-flex; align-items: center; gap: 8px; color: #fff; font-size: .93rem; font-weight: 900; letter-spacing: .13em; }
-.brand__mark { color: var(--yellow); font-size: 1.1rem; letter-spacing: -.28em; transform: skewX(-16deg); }
+.sidebar__brand { display: flex; align-items: center; justify-content: center; min-height: 166px; padding: 15px 16px; border-bottom: 1px solid var(--line); }
+.brand { display: block; width: 80%; max-width: 238px; }
+.brand img { display: block; width: 100%; height: auto; border-radius: 8px; }
 .sidebar__eyebrow { margin: 22px 22px 10px; color: var(--subtle); font-size: .64rem; font-weight: 800; letter-spacing: .13em; }
 .tree { flex: 1; overflow-y: auto; padding: 0 12px 24px; scrollbar-color: var(--line) transparent; }
 .tree__section { margin-top: 3px; }

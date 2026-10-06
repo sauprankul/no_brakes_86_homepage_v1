@@ -76,6 +76,7 @@ const fallbackArticles = [
 const initialContent = selectContentIndex(null);
 let categories = initialContent.categories;
 let articles = initialContent.articles;
+let about = initialContent.about;
 
 const app = document.querySelector('#app-shell');
 const main = document.querySelector('#main-content');
@@ -420,13 +421,13 @@ function renderAbout() {
   state.treeRoot = null;
   state.treeFocus = null;
   setBreadcrumb([{ label: 'Home', href: '/' }, { label: 'About' }]);
-  main.innerHTML = `
-    <section class="about">
-      <p class="eyebrow">ABOUT THIS PROJECT</p>
-      <h1>Notes have more value when they still make sense next season.</h1>
-      <p>This is the home for an 86/BRZ driver’s own record of track work, repairs, installs and development. It favors traceability over noise: every article is an authored primary record, with video and data as supporting evidence.</p>
-      <div class="principles"><div class="principle"><strong>Author first</strong><span>No AI-generated technical articles. The site helps structure and find your work; it does not invent it.</span></div><div class="principle"><strong>Context attached</strong><span>Track state, date, setup and sources stay with the claim—not in a fleeting caption.</span></div><div class="principle"><strong>Built to last</strong><span>Local Markdown, static HTML and portable data files keep the archive under your control.</span></div></div>
-    </section>`;
+  const toc = about?.headings?.length ? `<aside class="article-aside"><h2>On this page</h2><ul>${about.headings.map((heading) => `<li class="article-aside__level-${heading.depth}"><a href="#${esc(heading.id)}">${esc(heading.text)}</a></li>`).join('')}</ul></aside>` : '';
+  main.innerHTML = about ? `
+    ${articleHeaderMarkup(about, '')}
+    <div class="article-layout">
+      <article class="article-body article-markdown" data-pagefind-body>${about.html}</article>
+      ${toc}
+    </div>` : '<section class="empty-state"><strong>About is not available yet.</strong></section>';
   renderTree();
 }
 
@@ -648,6 +649,7 @@ async function loadPublishedContent(refresh = false) {
     if (content.generated_at !== loadedContentAt) {
       categories = selected.categories;
       articles = selected.articles;
+      about = selected.about;
       loadedContentAt = content.generated_at;
       if (refresh) route(false);
     }

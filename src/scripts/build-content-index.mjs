@@ -7,9 +7,10 @@ import { contentPath } from './content-routes.mjs';
 import { authorFingerprint, authorFingerprints, changedAuthorDirectories, changedSources, contentChangeLog, contentSnapshot, watchedSourceKind } from './content-watch.mjs';
 import { visibleCategories, visibleEntries } from './content-index-visibility.mjs';
 import { generateSizedMedia, IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
-import { contentRoot as defaultContentRoot, publicRoot } from './project-paths.mjs';
+import { contentRoot as defaultContentRoot, publicRoot, repositoryRoot } from './project-paths.mjs';
 
 const contentRoot = process.env.NO_BRAKES_CONTENT_DIR ? path.resolve(process.env.NO_BRAKES_CONTENT_DIR) : defaultContentRoot;
+const aboutRoot = process.env.NO_BRAKES_ABOUT_DIR ? path.resolve(process.env.NO_BRAKES_ABOUT_DIR) : path.join(repositoryRoot, 'about');
 const outputRoot = process.env.NO_BRAKES_PUBLIC_DIR ? path.resolve(process.env.NO_BRAKES_PUBLIC_DIR) : publicRoot;
 const outputFile = path.join(outputRoot, 'content-index.json');
 const isWatchMode = process.argv.includes('--watch');
@@ -63,6 +64,30 @@ async function ensureDirectory(directory) {
 async function copyGeneratedFile(source, destination) {
   await ensureDirectory(path.dirname(destination));
   await retryFilesystemOperation(() => copyFile(source, destination));
+}
+
+async function copySiteLogo() {
+  const source = path.join(contentRoot, 'logo.jpg');
+  const destination = path.join(outputRoot, 'logo.jpg');
+  if (await exists(source)) await copyGeneratedFile(source, destination);
+  else await rm(destination, { force: true });
+}
+
+async function authoredAbout() {
+  const articleFile = path.join(aboutRoot, 'article.md');
+  try {
+    const config = await readYaml(path.join(aboutRoot, 'config.yaml'));
+    const markdown = await readFile(articleFile, 'utf8');
+    return {
+      title: config.title ?? 'About',
+      subtitle: config.subtitle ?? '',
+      type: config.content_type ?? 'About',
+      ...renderArticleMarkdown(markdown, 'about', '/about'),
+    };
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  }
 }
 
 async function findThumbnail(directory, nodeId, configured) {
@@ -148,6 +173,8 @@ async function build({ prepareMedia = false } = {}) {
   if (!isWatchMode) {
     await Promise.all(['downloads', 'media'].map((directory) => rm(path.join(outputRoot, directory), { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })));
   }
+  await copySiteLogo();
+  const about = await authoredAbout();
   const configs = (await filesIn(contentRoot)).filter((file) => path.basename(file) === 'config.yaml');
   const entries = await Promise.all(configs.map(async (file) => ({ file, config: await normaliseArticle(file, await readYaml(file)) })));
   const nodeShells = await Promise.all(entries.map(async ({ file, config }) => {
@@ -221,7 +248,7 @@ async function build({ prepareMedia = false } = {}) {
     await copySizedMedia(node.directory, node.id);
   }));
   await mkdir(path.dirname(outputFile), { recursive: true });
-  await writeFile(outputFile, `${JSON.stringify({ generated_at: new Date().toISOString(), categories, articles }, null, 2)}\n`, 'utf8');
+  await writeFile(outputFile, `${JSON.stringify({ generated_at: new Date().toISOString(), categories, articles, about }, null, 2)}\n`, 'utf8');
   console.log(`Content index built: ${articles.length} ${includeDrafts ? 'preview' : 'published'} node(s).`);
 }
 
@@ -276,6 +303,19 @@ if (isWatchMode) {
   process.once('SIGINT', () => clearInterval(updateTimer));
   process.once('SIGTERM', () => clearInterval(updateTimer));
   const watcher = watch(contentRoot, { recursive: true });
+  const watchAbout = async () => {
+    try {
+      const aboutWatcher = watch(aboutRoot, { recursive: true });
+      for await (const event of aboutWatcher) {
+        if (!event.filename) continue;
+        console.log(`About changes detected; rebuilding:\n  - about/${event.filename}`);
+        enqueue(() => build({ prepareMedia: false }));
+      }
+    } catch (error) {
+      if (error?.code !== 'ENOENT') console.error(error);
+    }
+  };
+  watchAbout();
   for await (const event of watcher) {
     const file = path.join(contentRoot, String(event.filename));
     if ((selfWrites.get(path.resolve(file).toLowerCase()) ?? 0) > Date.now()) continue;

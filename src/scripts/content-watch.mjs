@@ -11,6 +11,7 @@ export function watchedSourceKind(relativePath) {
   if (lower.includes('sizedmedia')) return null;
   if (lower.at(-1) === 'article.md') return 'article';
   if (lower.at(-1) === 'config.yaml') return 'config';
+  if (lower.length === 1 && lower[0] === 'logo.jpg') return 'site asset';
   if (lower.includes('media')) return 'media';
   if (lower.includes('downloads')) return 'download';
   return null;
@@ -88,6 +89,6 @@ export function authorFingerprints(snapshot) {
 }
 
 export function contentChangeLog(changes) {
-  const labels = { article: 'article.md', config: 'config.yaml', media: 'Media', download: 'Downloads' };
+  const labels = { article: 'article.md', config: 'config.yaml', 'site asset': 'Site asset', media: 'Media', download: 'Downloads' };
   return changes.map((change) => `  - ${labels[change.kind] ?? change.kind}: Content/${change.path}${change.removed ? ' (removed)' : ''}`).join('\n');
 }
