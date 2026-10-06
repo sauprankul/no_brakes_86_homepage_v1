@@ -51,4 +51,7 @@ test('converts a high-frame-rate source clip to the static MP4 profile', async (
 test('the HEIC reader permits complex but locally authored container references while retaining the pixel limit', async () => {
   const pipeline = await readFile(path.join(process.cwd(), 'scripts', 'media-pipeline.mjs'), 'utf8');
   assert.match(pipeline, /sharp\(source, \{ limitInputPixels: 100_000_000, unlimited: true \}\)/);
+  assert.match(pipeline, /import convertHeic from 'heic-convert'/);
+  assert.match(pipeline, /await convertHeic\(\{ buffer: await readFile\(source\), format: 'JPEG', quality: 0\.9 \}\)/);
+  assert.doesNotMatch(pipeline, /heif-convert/);
 });

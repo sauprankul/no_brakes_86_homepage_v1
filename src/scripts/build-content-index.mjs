@@ -7,9 +7,10 @@ import { contentPath } from './content-routes.mjs';
 import { authorFingerprint, authorFingerprints, changedAuthorDirectories, changedSources, contentChangeLog, contentSnapshot, watchedSourceKind } from './content-watch.mjs';
 import { visibleCategories, visibleEntries } from './content-index-visibility.mjs';
 import { generateSizedMedia, IMAGE_EXTENSIONS, publicMediaPath, sizedMediaRelativePath } from './media-pipeline.mjs';
-import { contentRoot as defaultContentRoot, publicRoot } from './project-paths.mjs';
+import { contentRoot as defaultContentRoot, publicRoot, repositoryRoot } from './project-paths.mjs';
 
 const contentRoot = process.env.NO_BRAKES_CONTENT_DIR ? path.resolve(process.env.NO_BRAKES_CONTENT_DIR) : defaultContentRoot;
+const aboutRoot = process.env.NO_BRAKES_ABOUT_DIR ? path.resolve(process.env.NO_BRAKES_ABOUT_DIR) : path.join(repositoryRoot, 'about');
 const outputRoot = process.env.NO_BRAKES_PUBLIC_DIR ? path.resolve(process.env.NO_BRAKES_PUBLIC_DIR) : publicRoot;
 const outputFile = path.join(outputRoot, 'content-index.json');
 const isWatchMode = process.argv.includes('--watch');
@@ -17,6 +18,7 @@ const includeDrafts = process.argv.includes('--include-drafts');
 const touchUpdates = process.argv.includes('--touch-updates');
 const requestedUpdateInterval = Number(process.env.NO_BRAKES_UPDATE_INTERVAL_MS ?? 60_000);
 const updateIntervalMs = Number.isFinite(requestedUpdateInterval) && requestedUpdateInterval > 0 ? requestedUpdateInterval : 60_000;
+const retryableFilesystemCodes = new Set(['EACCES', 'EBUSY', 'ENOTEMPTY', 'EPERM']);
 
 const now = () => new Date().toISOString();
 const legacyDateTimestamp = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '') ? `${value}T00:00:00.000Z` : value;
@@ -37,6 +39,55 @@ async function readYaml(file) {
 
 async function exists(file) {
   return access(file).then(() => true).catch(() => false);
+}
+
+const pause = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function retryFilesystemOperation(operation) {
+  let error;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      return await operation();
+    } catch (caught) {
+      error = caught;
+      if (!retryableFilesystemCodes.has(caught?.code) || attempt === 4) throw caught;
+      await pause(50 * (attempt + 1));
+    }
+  }
+  throw error;
+}
+
+async function ensureDirectory(directory) {
+  await retryFilesystemOperation(() => mkdir(directory, { recursive: true }));
+}
+
+async function copyGeneratedFile(source, destination) {
+  await ensureDirectory(path.dirname(destination));
+  await retryFilesystemOperation(() => copyFile(source, destination));
+}
+
+async function copySiteLogo() {
+  const source = path.join(contentRoot, 'logo.jpg');
+  const destination = path.join(outputRoot, 'logo.jpg');
+  if (await exists(source)) await copyGeneratedFile(source, destination);
+  else await rm(destination, { force: true });
+}
+
+async function authoredAbout() {
+  const articleFile = path.join(aboutRoot, 'article.md');
+  try {
+    const config = await readYaml(path.join(aboutRoot, 'config.yaml'));
+    const markdown = await readFile(articleFile, 'utf8');
+    return {
+      title: config.title ?? 'About',
+      subtitle: config.subtitle ?? '',
+      type: config.content_type ?? 'About',
+      ...renderArticleMarkdown(markdown, 'about', '/about'),
+    };
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  }
 }
 
 async function findThumbnail(directory, nodeId, configured) {
@@ -71,8 +122,7 @@ async function copyDownloads(directory, entryPath) {
   const files = await filesIn(downloadsDirectory);
   await Promise.all(files.map(async (file) => {
     const destination = path.join(outputRoot, entryPath.replace(/^\/+/, ''), 'downloads', path.relative(downloadsDirectory, file));
-    await mkdir(path.dirname(destination), { recursive: true });
-    await copyFile(file, destination);
+    await copyGeneratedFile(file, destination);
   }));
 }
 
@@ -80,11 +130,11 @@ async function copySizedMedia(directory, nodeId) {
   const sizedDirectory = path.join(directory, 'SizedMedia');
   if (!await exists(sizedDirectory)) return;
   const files = await filesIn(sizedDirectory);
-  await Promise.all(files.filter((file) => path.basename(file) !== '.media-manifest.json').map(async (file) => {
-    const destination = path.join(outputRoot, 'media', nodeId, path.relative(sizedDirectory, file));
-    await mkdir(path.dirname(destination), { recursive: true });
-    await copyFile(file, destination);
-  }));
+  const destinationRoot = path.join(outputRoot, 'media', nodeId);
+  await ensureDirectory(destinationRoot);
+  for (const file of files.filter((candidate) => path.basename(candidate) !== '.media-manifest.json')) {
+    await copyGeneratedFile(file, path.join(destinationRoot, path.relative(sizedDirectory, file)));
+  }
 }
 
 async function writeYaml(file, value) {
@@ -123,6 +173,8 @@ async function build({ prepareMedia = false } = {}) {
   if (!isWatchMode) {
     await Promise.all(['downloads', 'media'].map((directory) => rm(path.join(outputRoot, directory), { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })));
   }
+  await copySiteLogo();
+  const about = await authoredAbout();
   const configs = (await filesIn(contentRoot)).filter((file) => path.basename(file) === 'config.yaml');
   const entries = await Promise.all(configs.map(async (file) => ({ file, config: await normaliseArticle(file, await readYaml(file)) })));
   const nodeShells = await Promise.all(entries.map(async ({ file, config }) => {
@@ -156,7 +208,6 @@ async function build({ prepareMedia = false } = {}) {
       tags: (node.config.tags ?? []).map(String),
       media: node.config.media_label ?? 'NOTE',
       thumbnail: node.thumbnail,
-      featured: node.config.featured ?? '',
       type: node.config.content_type ?? (node.hasArticle ? 'Article' : 'Index'),
       html: node.html,
       headings: node.headings,
@@ -177,7 +228,6 @@ async function build({ prepareMedia = false } = {}) {
       tags: (config.tags ?? []).map(String),
       media: config.media_label ?? 'NOTE',
       thumbnail,
-      featured: config.featured ?? '',
       type: config.content_type ?? (hasArticle ? 'Article' : 'Index'),
       html,
       headings,
@@ -198,7 +248,7 @@ async function build({ prepareMedia = false } = {}) {
     await copySizedMedia(node.directory, node.id);
   }));
   await mkdir(path.dirname(outputFile), { recursive: true });
-  await writeFile(outputFile, `${JSON.stringify({ generated_at: new Date().toISOString(), categories, articles }, null, 2)}\n`, 'utf8');
+  await writeFile(outputFile, `${JSON.stringify({ generated_at: new Date().toISOString(), categories, articles, about }, null, 2)}\n`, 'utf8');
   console.log(`Content index built: ${articles.length} ${includeDrafts ? 'preview' : 'published'} node(s).`);
 }
 
@@ -253,6 +303,19 @@ if (isWatchMode) {
   process.once('SIGINT', () => clearInterval(updateTimer));
   process.once('SIGTERM', () => clearInterval(updateTimer));
   const watcher = watch(contentRoot, { recursive: true });
+  const watchAbout = async () => {
+    try {
+      const aboutWatcher = watch(aboutRoot, { recursive: true });
+      for await (const event of aboutWatcher) {
+        if (!event.filename) continue;
+        console.log(`About changes detected; rebuilding:\n  - about/${event.filename}`);
+        enqueue(() => build({ prepareMedia: false }));
+      }
+    } catch (error) {
+      if (error?.code !== 'ENOENT') console.error(error);
+    }
+  };
+  watchAbout();
   for await (const event of watcher) {
     const file = path.join(contentRoot, String(event.filename));
     if ((selfWrites.get(path.resolve(file).toLowerCase()) ?? 0) > Date.now()) continue;

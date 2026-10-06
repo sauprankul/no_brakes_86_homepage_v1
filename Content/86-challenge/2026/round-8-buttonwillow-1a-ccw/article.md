@@ -59,3 +59,8 @@ It's a bit humbling to "neuter" the car because I'm incapable of handling it. Bu
 - Sunrise: I brake, turn and get on the gas too early, losing ~0.1 and my transmission loses me another 0.1 in the drag race to the finish. Total delta: -0.3s
 
 Overall: Brake later, pivot harder.
+
+## Downloads
+
+[AIM XRK Data - Session 2](./Downloads/aim_session_2.xrk)
+[AIM CSV Data - Session 2](./Downloads/aim_session_2.csv)

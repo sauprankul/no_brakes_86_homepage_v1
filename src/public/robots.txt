@@ -1,4 +1,28 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://YOUR-DOMAIN.example/sitemap.xml
+User-agent: Googlebot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+Sitemap: https://nobrakes86.com/sitemap.xml

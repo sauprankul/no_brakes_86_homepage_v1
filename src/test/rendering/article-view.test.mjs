@@ -16,6 +16,12 @@ test('omits an empty config subtitle', () => {
   assert.doesNotMatch(html, /article-header__subtitle/);
 });
 
+test('omits an empty article type label without leaving an empty eyebrow', () => {
+  const markup = articleHeaderMarkup({ title: 'About', subtitle: '', type: '' }, '');
+  assert.doesNotMatch(markup, /class="eyebrow"/);
+  assert.match(markup, /<h1>About<\/h1>/);
+});
+
 test('article and list headers have one post-subtitle divider and matching subtitle sizing', async () => {
   const stylesheet = await readFile(path.join(process.cwd(), 'styles.css'), 'utf8');
   assert.match(stylesheet, /\.article-layout \{[^}]*border-top: 1px solid var\(--line\)/);

@@ -38,3 +38,8 @@ You might think this means I've won the championship. But Ivan won't let a pesky
 ## SX2 Lap
 
 I did a 1:54.6 on my old-ish 245 SX2 later in the day. It was fairly warm, too. 1:54 at Sonoma in Stock class *used* to be considered a scorching time. And honestly, I like to think it is, even if there are guys out there who have gone faster.
+
+## Downloads
+
+[AIM XRK Data - Session 2](./Downloads/aim_session_2.xrk)
+[AIM CSV Data - Session 2](./Downloads/aim_session_2.csv)

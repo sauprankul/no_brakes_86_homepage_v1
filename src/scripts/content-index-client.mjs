@@ -3,7 +3,7 @@
 // published, not that the client may substitute fixture or draft data.
 export function selectContentIndex(index) {
   if (!Array.isArray(index?.categories) || !Array.isArray(index?.articles)) {
-    return { categories: [], articles: [] };
+    return { categories: [], articles: [], about: null };
   }
-  return { categories: index.categories, articles: index.articles };
+  return { categories: index.categories, articles: index.articles, about: index.about ?? null };
 }

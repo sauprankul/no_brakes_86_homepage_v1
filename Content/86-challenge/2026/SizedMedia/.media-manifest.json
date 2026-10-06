@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "source": "thumbnail.jpg",
+      "source_hash": "741fcab2f9d62d1ac68cbb09eed181ba96a99016c0c8587c647f7f6f77d67942",
+      "output": "thumbnail.jpg",
+      "type": "image"
+    }
+  ]
+}

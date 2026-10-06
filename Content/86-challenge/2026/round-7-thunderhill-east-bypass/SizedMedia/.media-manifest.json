@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "source": "thumbnail.heic",
+      "source_hash": "87d4345191185889b407bfe44e947d86a1b56f03e9bda945b7dfdc1dc6b58f3b",
+      "output": "thumbnail.jpg",
+      "type": "image"
+    }
+  ]
+}

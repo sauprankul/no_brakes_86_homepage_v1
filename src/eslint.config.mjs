@@ -6,6 +6,7 @@ export default tseslint.config(
   {
     ignores: [
       '.c8-collection-tmp/**',
+      '.production-public*/**',
       'coverage/**',
       'dist/**',
       'node_modules/**',
