@@ -423,7 +423,7 @@ function renderAbout() {
   setBreadcrumb([{ label: 'Home', href: '/' }, { label: 'About' }]);
   const toc = about?.headings?.length ? `<aside class="article-aside"><h2>On this page</h2><ul>${about.headings.map((heading) => `<li class="article-aside__level-${heading.depth}"><a href="#${esc(heading.id)}">${esc(heading.text)}</a></li>`).join('')}</ul></aside>` : '';
   main.innerHTML = about ? `
-    ${articleHeaderMarkup(about, '')}
+    ${articleHeaderMarkup({ ...about, type: '' }, '')}
     <div class="article-layout">
       <article class="article-body article-markdown" data-pagefind-body>${about.html}</article>
       ${toc}
