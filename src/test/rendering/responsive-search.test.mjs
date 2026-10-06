@@ -10,3 +10,7 @@ test('mobile global search preserves room for its field, action, and full-width 
   assert.match(stylesheet, /@media \(max-width: 520px\)\s*\{[\s\S]*?\.global-search button \{ min-width: 76px; padding: 0 10px; \}/);
   assert.match(stylesheet, /\.search-suggestions \{[^}]*right: 0; left: 0;/);
 });
+
+test('mobile search and filter controls stay at the iOS no-zoom font size', () => {
+  assert.match(stylesheet, /@media \(max-width: 800px\)[\s\S]*\.global-search input,[^{}]*\.collection-filter-dialog select \{ font-size: 16px; \}/);
+});
