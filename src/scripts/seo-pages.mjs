@@ -1,9 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { routeMetadata, SITE_URL } from './document-metadata.mjs';
+import { descriptionFor, routeMetadata, SITE_URL } from './document-metadata.mjs';
 
 const SITE_NAME = 'No Brakes 86';
 const AUTHOR_NAME = 'Saurabh Kulkarni';
+const AUTHOR_URL = `${SITE_URL}/about`;
 const HOME_DESCRIPTION = "No Brakes 86 is Saurabh Kulkarni's repository of knowledge. He's built it through years of competing and winning in 86 Challenge, one of the most competitive, data-driven time trials in California.";
 const SOCIAL_PROFILES = [
   'https://www.reddit.com/user/404-no-brkz/',
@@ -55,7 +56,7 @@ function breadcrumbData(index, entry) {
 }
 
 function personData() {
-  return { '@type': 'Person', '@id': `${SITE_URL}/#saurabh-kulkarni`, name: AUTHOR_NAME, url: `${SITE_URL}/about`, sameAs: SOCIAL_PROFILES };
+  return { '@type': 'Person', '@id': `${SITE_URL}/#saurabh-kulkarni`, name: AUTHOR_NAME, url: AUTHOR_URL, sameAs: SOCIAL_PROFILES };
 }
 
 function websiteData() {
@@ -78,7 +79,8 @@ function pageMetadata(index, kind, entry) {
       ...(entry.date ? { datePublished: entry.date } : {}),
       ...(entry.updatedAt ? { dateModified: entry.updatedAt } : {}),
       ...(entry.thumbnail ? { image: [image] } : {}),
-      author: { '@id': `${SITE_URL}/#saurabh-kulkarni` },
+      author: [{ '@type': 'Person', '@id': `${SITE_URL}/#saurabh-kulkarni`, name: AUTHOR_NAME, url: AUTHOR_URL }],
+      inLanguage: 'en',
       isPartOf: { '@id': `${SITE_URL}/#website` },
     }, breadcrumbData(index, entry));
   } else if (kind === 'category') {
@@ -95,13 +97,25 @@ function articleList(entries) {
   return `<ul>${entries.map((entry) => `<li><a href="${htmlEscape(entry.path)}">${htmlEscape(entry.title)}</a>${entry.subtitle ? ` — ${htmlEscape(entry.subtitle)}` : ''}</li>`).join('')}</ul>`;
 }
 
+function readableDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return '';
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' }).format(date);
+}
+
+function articleInfo(entry) {
+  const published = entry.date ? `<time datetime="${htmlEscape(entry.date)}">Published ${htmlEscape(readableDate(entry.date))}</time>` : '';
+  const updated = entry.updatedAt && entry.updatedAt !== entry.date ? `<time datetime="${htmlEscape(entry.updatedAt)}">Updated ${htmlEscape(readableDate(entry.updatedAt))}</time>` : '';
+  return `<p class="article-info"><span>By <a href="/about">${AUTHOR_NAME}</a></span>${published ? `<span>${published}</span>` : ''}${updated ? `<span>${updated}</span>` : ''}</p>`;
+}
+
 function pageBody(index, kind, entry) {
   if (kind === 'home') {
     const latest = [...index.articles].filter((article) => article.published === true).sort((left, right) => (right.date ?? right.updatedAt ?? '').localeCompare(left.date ?? left.updatedAt ?? '')).slice(0, 5);
     return `<section class="hero"><div><h1>Have an 86? Want to drive fast?<br><em>You're in the right place.</em></h1><div class="hero__rule"></div></div><div><p class="hero__copy">In 4 years, I've broken almost every single part of this car - the engine, the transmission, the steering rack, the brakes, the suspension. Uncountable sets of tires. I've done a lot of dumb, expensive stuff, but I've also won TTs, set records and generally gotten pretty good at driving.<br><br>I was tired of how inaccessible good information was online, so I built this website to help other Toyobaru owners get up to speed the easy way. No AI content, no paywalls, no ads, no dropshipped merch, no paid courses. Just sauce.</p><a class="hero__about" href="/about">More about why I made this <span aria-hidden="true">↗</span></a></div></section><section class="feed" aria-label="New"><div class="feed-head"><h2>New</h2></div>${articleList(latest)}</section>`;
   }
   if (kind === 'about') return `<header class="article-header"><h1>${htmlEscape(index.about?.title || 'About')}</h1></header><div class="article-layout"><article class="article-body article-markdown" data-pagefind-body>${index.about?.html ?? ''}</article></div>`;
-  if (kind === 'article') return `<header class="article-header">${entry.type ? `<p class="eyebrow">${htmlEscape(entry.type)}</p>` : ''}<h1>${htmlEscape(entry.title)}</h1>${entry.subtitle ? `<p class="article-header__subtitle">${htmlEscape(entry.subtitle)}</p>` : ''}</header><div class="article-layout"><article class="article-body article-markdown" data-pagefind-body>${entry.html ?? ''}</article></div>`;
+  if (kind === 'article') return `<header class="article-header">${entry.type ? `<p class="eyebrow">${htmlEscape(entry.type)}</p>` : ''}<h1>${htmlEscape(entry.title)}</h1>${entry.subtitle ? `<p class="article-header__subtitle">${htmlEscape(entry.subtitle)}</p>` : ''}${articleInfo(entry)}</header><div class="article-layout"><article class="article-body article-markdown" data-pagefind-body>${entry.html ?? ''}</article></div>`;
   const children = directChildren(index, entry.id).filter((child) => !('published' in child) || child.published === true);
   return `<header class="page-header"><h1>${htmlEscape(entry.name || entry.title)}</h1>${entry.intro || entry.subtitle ? `<p>${htmlEscape(entry.intro || entry.subtitle)}</p>` : ''}</header><section aria-label="${htmlEscape(entry.name || entry.title)} entries">${articleList(children)}</section>`;
 }
@@ -124,6 +138,7 @@ function renderDocument(template, metadata, body) {
     <meta name="twitter:title" content="${htmlEscape(metadata.title)}" />
     <meta name="twitter:description" content="${htmlEscape(metadata.description)}" />
     <meta name="twitter:image" content="${htmlEscape(metadata.image)}" />
+    <link rel="alternate" type="application/rss+xml" title="${SITE_NAME}" href="${SITE_URL}/feed.xml" />
     <script type="application/ld+json">${jsonLd({ '@context': 'https://schema.org', '@graph': metadata.graph })}</script>
     <!-- seo:end -->`;
   return template
@@ -188,6 +203,18 @@ export function sitemapXml(index) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
+export function rssXml(index) {
+  const articles = (index.articles ?? [])
+    .filter((entry) => entry.published === true && entry.hasArticle === true)
+    .sort((left, right) => (right.date ?? '').localeCompare(left.date ?? ''));
+  const items = articles.map((entry) => {
+    const url = absoluteUrl(entry.path);
+    const publicationDate = entry.date ? new Date(entry.date).toUTCString() : '';
+    return `    <item>\n      <title>${xmlEscape(entry.title)}</title>\n      <link>${xmlEscape(url)}</link>\n      <guid isPermaLink="true">${xmlEscape(url)}</guid>${publicationDate ? `\n      <pubDate>${xmlEscape(publicationDate)}</pubDate>` : ''}\n      <description>${xmlEscape(descriptionFor(entry, 'A No Brakes 86 article.'))}</description>\n    </item>`;
+  }).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>${SITE_NAME}</title>\n    <link>${SITE_URL}/</link>\n    <description>${xmlEscape(HOME_DESCRIPTION)}</description>\n    <language>en-us</language>\n${items}\n  </channel>\n</rss>\n`;
+}
+
 export async function writeSeoPages(index, template, outputRoot) {
   const pages = renderSeoPages(index, template);
   for (const page of pages) {
@@ -197,5 +224,6 @@ export async function writeSeoPages(index, template, outputRoot) {
   }
   await writeFile(path.join(outputRoot, 'robots.txt'), robotsText(), 'utf8');
   await writeFile(path.join(outputRoot, 'sitemap.xml'), sitemapXml(index), 'utf8');
+  await writeFile(path.join(outputRoot, 'feed.xml'), rssXml(index), 'utf8');
   return pages.length;
 }

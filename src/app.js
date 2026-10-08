@@ -402,7 +402,7 @@ function renderArticle(id) {
   const hasChildren = directChildren(article.id).length > 0;
   const toc = article.headings?.length ? `<aside class="article-aside"><h2>On this page</h2><ul>${article.headings.map((heading) => `<li class="article-aside__level-${heading.depth}"><a href="#${esc(heading.id)}">${esc(heading.text)}</a></li>`).join('')}</ul></aside>` : '';
   setBreadcrumb(breadcrumbParts(article.id));
-  const details = `${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && !sameTimestamp(article.updatedAt, article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}`;
+  const details = `<span>By <a href="/about">Saurabh Kulkarni</a></span>${article.date ? `<span>Published <b>${formatDate(article.date)}</b></span>` : ''}${article.updatedAt && !sameTimestamp(article.updatedAt, article.date) ? `<span>Updated <b>${formatDate(article.updatedAt)}</b></span>` : ''}${article.tags.length ? `<span>Tags ${tags(article.tags)}</span>` : ''}`;
   const devPublishControl = devPublicationControlMarkup(article, import.meta.env.DEV);
   main.innerHTML = `
     ${articleHeaderMarkup(article, details)}
