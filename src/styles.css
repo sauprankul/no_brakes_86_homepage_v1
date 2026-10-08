@@ -173,6 +173,8 @@ main { max-width: 1500px; margin: 0 auto; padding: clamp(26px, 5vw, 76px) clamp(
 .article-info { display: flex; flex-wrap: wrap; gap: 9px 20px; margin-top: 21px; color: var(--muted); font-size: .73rem; }
 .article-info > span { display: inline-flex; align-items: center; gap: 7px; }
 .article-info b { color: var(--ink); }
+.article-info a { color: var(--yellow); font-weight: 700; }
+.article-info a:hover { color: var(--yellow-bright); }
 .dev-publish { position: fixed; z-index: 15; top: 92px; right: clamp(24px, 5vw, 66px); margin: 0; padding: 0; }
 .dev-publish__toggle { min-height: 36px; padding: 8px 13px; border: 1px solid transparent; border-radius: 999px; box-shadow: 0 8px 24px rgb(0 0 0 / .24); font: inherit; font-size: .76rem; font-weight: 850; letter-spacing: .02em; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
 .dev-publish__toggle:hover { transform: translateY(-1px); }

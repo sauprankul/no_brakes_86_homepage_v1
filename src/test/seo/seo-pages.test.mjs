@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { renderSeoPages, robotsText, sitemapXml } from '../../scripts/seo-pages.mjs';
+import { renderSeoPages, robotsText, rssXml, sitemapXml } from '../../scripts/seo-pages.mjs';
 
 const template = '<!doctype html><html lang="en"><head><meta name="description" content="old" /><title>Old</title></head><body><main id="main-content" tabindex="-1"></main></body></html>';
 const index = {
@@ -19,9 +19,20 @@ test('renders published routes as crawlable HTML with canonical metadata and Art
   assert.ok(article);
   assert.match(article.html, /<link rel="canonical" href="https:\/\/nobrakes86\.com\/racing\/round-1"/);
   assert.match(article.html, /"@type":"Article"/);
+  assert.match(article.html, /"inLanguage":"en"/);
+  assert.match(article.html, /By <a href="\/about">Saurabh Kulkarni<\/a>/);
+  assert.match(article.html, /<time datetime="2026-02-15T04:00:00.000Z">Published February 15, 2026<\/time>/);
   assert.match(article.html, /<p>Authored evidence\.<\/p>/);
   assert.match(article.html, /property="og:image" content="https:\/\/nobrakes86\.com\/media\/round-1\/thumbnail\.jpg"/);
   assert.equal(pages.some((page) => page.route === '/racing/draft'), false);
+});
+
+test('generates an RSS feed for published article routes', () => {
+  const feed = rssXml(index);
+  assert.match(feed, /<rss version="2.0">/);
+  assert.match(feed, /<title>Round 1<\/title>/);
+  assert.match(feed, /<link>https:\/\/nobrakes86\.com\/racing\/round-1<\/link>/);
+  assert.doesNotMatch(feed, /Draft/);
 });
 
 test('renders the site logo as the home sharing image', () => {
