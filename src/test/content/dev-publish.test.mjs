@@ -26,9 +26,10 @@ test('the local dev publisher changes only the matching config file', async () =
   const entry = path.join(root, 'entry');
   await mkdir(entry);
   await writeFile(path.join(entry, 'config.yaml'), 'id: local-entry\npublished: false\npublished_at: null\nupdated_at: null\n');
-  const next = await togglePublishedEntry('local-entry', root);
+  const next = await togglePublishedEntry('entry', root);
   const saved = YAML.parse(await readFile(path.join(entry, 'config.yaml'), 'utf8'));
   assert.equal(next.published, true);
+  assert.equal(next.id, 'entry');
   assert.equal(saved.published, true);
   assert.equal(saved.published_at, next.published_at);
 });

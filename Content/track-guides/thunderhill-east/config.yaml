@@ -1,11 +1,15 @@
 node_type: article
 id: thunderhill-east
 parent: track-guides
-title: Thunderhill East
-subtitle: ''
+title: Thunderhill East (Repave)
+subtitle: How to go fast-ish at East and what you need to change for the repave.
 content_type: Track Guide
-published: false
-published_at: null
-updated_at: null
-tags: [track-guide, thunderhill, data]
+published: true
+published_at: 2026-10-11T19:31:31.238Z
+updated_at: 2026-10-11T20:15:44.456Z
+tags:
+  - track-guide
+  - thunderhill
+  - east
+  - repave
 media_label: TRACK

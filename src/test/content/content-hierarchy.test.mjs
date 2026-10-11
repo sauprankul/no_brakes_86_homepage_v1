@@ -18,3 +18,12 @@ test('nested entries retain their top-level category and direct category childre
   ];
   assert.deepEqual(directCategoryChildren(entries, 'race'), ['2026']);
 });
+
+test('nested path keys retain the top-level category', () => {
+  const keyedNodes = [
+    { id: 'race', key: 'archive', parent: null },
+    { id: '2026', key: 'archive/season', parent: 'archive' },
+    { id: 'round-1', key: 'archive/season/round-1', parent: 'archive/season' },
+  ];
+  assert.equal(rootCategoryId(keyedNodes, keyedNodes[2]), 'archive');
+});

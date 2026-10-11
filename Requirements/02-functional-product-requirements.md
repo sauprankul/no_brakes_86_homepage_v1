@@ -10,7 +10,7 @@ Everything in the archive is a **node**. Every node folder has exactly one `conf
 
 This permits the requested Confluence-like hierarchy without inventing two incompatible content types. A folder-only node renders its child previews; an article node renders its content first and child previews below it.
 
-Every public route is the entry's title-derived hierarchical path, for example `/86-challenge/2026-86-challenge-season`. URLs never encode implementation types such as `category`, `article`, or hash routes. The presence of `article.md` alone selects article rendering; its absence selects preview-list rendering at the same kind of URL.
+Every public route is the entry's ID-derived hierarchical path, for example `/86-challenge/2026-86-challenge`. URLs never encode implementation types such as `category`, `article`, or hash routes. The presence of `article.md` alone selects article rendering; its absence selects preview-list rendering at the same kind of URL.
 
 Required initial top-level nodes:
 
@@ -110,7 +110,7 @@ An unmatched page or attachment URL renders an explicit 404 state that preserves
 
 ## SEO requirements
 
-- One stable canonical URL per article; preserve it indefinitely and 301 redirect any renamed slug.
+- One stable canonical URL per article; preserve it indefinitely and 301 redirect any renamed ID.
 - Generate `sitemap.xml`, `robots.txt`, canonical metadata, Open Graph image, `Article` / `VideoObject` / `HowTo` schema only when valid for that article.
-- Use descriptive, title-derived URL segments in the full entry hierarchy. Do not add route-type prefixes or use dated URLs unless date is a primary part of the content.
+- Use stable content IDs as URL segments in the full entry hierarchy. Do not add route-type prefixes or use dated URLs unless date is a primary part of the content.
 - Add internal links between related articles where the author chooses them; do not create fake “related” content.

@@ -28,7 +28,7 @@ Every source-triggered authoring rebuild logs one grouped reason before rebuildi
 
 During `npm run dev`, application console output, warnings, errors, uncaught browser exceptions, and unhandled promise rejections must be mirrored to the same authoring terminal with a browser-source prefix. Browser-only failures must never be discoverable solely through developer tools. The log bridge and its local endpoint are development-only and are absent from production behavior.
 
-The generated index assigns every entry a title-derived path built from its complete parent hierarchy. The browser independently derives the same path from entry titles and parent relationships when a generated path is absent, so a stale local index cannot turn a hierarchy link into an unmatched flat URL. The browser router resolves that path to one entry and chooses article or preview-list rendering solely from the generated `hasArticle` value, which itself comes only from the presence of `article.md`. Cloudflare Pages' SPA fallback serves `index.html` for direct requests to these hierarchy paths.
+The generated index assigns every entry an ID-derived path built from its complete parent hierarchy. The browser independently derives the same path from entry IDs and parent relationships, so stale generated path fields cannot turn a hierarchy link into an unmatched flat URL. The browser router resolves that path to one entry and chooses article or preview-list rendering solely from the generated `hasArticle` value, which itself comes only from the presence of `article.md`. Cloudflare Pages' SPA fallback serves `index.html` for direct requests to these hierarchy paths.
 
 ## Media contract
 

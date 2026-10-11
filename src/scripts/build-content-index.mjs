@@ -91,7 +91,7 @@ async function authoredAbout() {
 }
 
 async function findThumbnail(directory, nodeId, configured) {
-  if (await exists(path.join(directory, 'SizedMedia', 'thumbnail.jpg'))) return `/media/${encodeURIComponent(nodeId)}/thumbnail.jpg`;
+  if (await exists(path.join(directory, 'SizedMedia', 'thumbnail.jpg'))) return publicMediaPath(nodeId, './Media/thumbnail.jpg');
   if (/^\.\/Media\//i.test(configured ?? '')) {
     try {
       const source = configured.replace(/^\.\/Media\//i, '');
@@ -180,17 +180,23 @@ async function build({ prepareMedia = false } = {}) {
   const nodeShells = await Promise.all(entries.map(async ({ file, config }) => {
     const id = config.id ?? slugFrom(file);
     const directory = path.dirname(file);
-    return { file, config, id, parent: config.parent ?? null, thumbnail: await findThumbnail(directory, id, config.thumbnail), directory };
+    return { file, config, id, key: slugFrom(file), directory };
+  }));
+  const nodeByDirectory = new Map(nodeShells.map((node) => [node.directory, node]));
+  await Promise.all(nodeShells.map(async (node) => {
+    node.parent = nodeByDirectory.get(path.dirname(node.directory))?.key ?? null;
+    node.thumbnail = await findThumbnail(node.directory, node.key, node.config.thumbnail);
   }));
   const nodes = await Promise.all(nodeShells.map(async (node) => ({
     ...node,
-    ...(await articleData(node.directory, node.id, contentPath(nodeShells, node))),
+    ...(await articleData(node.directory, node.key, contentPath(nodeShells, node))),
   })));
   let categories = nodes
     .filter(({ parent }) => !parent)
     .sort((a, b) => (a.config.order ?? 999) - (b.config.order ?? 999))
     .map((node) => ({
-      id: node.id,
+      id: node.key,
+      slug: node.id,
       path: contentPath(nodes, node),
       title: node.config.title,
       name: node.config.title,
@@ -200,7 +206,7 @@ async function build({ prepareMedia = false } = {}) {
       intro: node.config.description ?? '',
       children: [],
       parent: null,
-      category: node.id,
+      category: node.key,
       hasArticle: node.hasArticle,
       subtitle: node.config.subtitle ?? '',
       date: node.config.published_at,
@@ -214,10 +220,11 @@ async function build({ prepareMedia = false } = {}) {
       searchSections: node.searchSections,
     }));
   const articles = visibleEntries(nodes, includeDrafts)
-    .map(({ config, id, parent, thumbnail, hasArticle, html, headings, searchSections }) => ({
-      id,
-      path: contentPath(nodes, { config, id, parent }),
-      category: rootCategoryId(nodes, { id, parent }),
+    .map(({ config, id, key, parent, thumbnail, hasArticle, html, headings, searchSections }) => ({
+      id: key,
+      slug: id,
+      path: contentPath(nodes, { config, id, key, parent }),
+      category: rootCategoryId(nodes, { id: key, parent }),
       parent,
       children: [],
       hasArticle,
@@ -245,7 +252,7 @@ async function build({ prepareMedia = false } = {}) {
   categories = visibleCategories(categories, includeDrafts);
   await Promise.all(nodes.filter((node) => includeDrafts || node.config.published === true).map(async (node) => {
     await copyDownloads(node.directory, contentPath(nodes, node));
-    await copySizedMedia(node.directory, node.id);
+    await copySizedMedia(node.directory, node.key);
   }));
   await mkdir(path.dirname(outputFile), { recursive: true });
   await writeFile(outputFile, `${JSON.stringify({ generated_at: new Date().toISOString(), categories, articles, about }, null, 2)}\n`, 'utf8');
