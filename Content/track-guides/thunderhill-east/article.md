@@ -79,3 +79,8 @@ You need to minimize the time to 100% throttle. You'll initially be nervous to s
 ### Bypass
 
 You should be very comfortable carrying speed over bypass. The limiting factor for you should be the grip of the car going down the hill. In a stock-ish GR86, you should not be using brakes over the crest (no brakes!), but instead carry light throttle until the car starts to land, at which point you should trail brake until you clip the curb at the bottom. It sounds absurd but that's the game, at least with an understeery car.
+
+## Downloads
+
+[AIM XRK Data - Session 5](./Downloads/aim_session_5.xrk)
+[AIM CSV Data - Session 5](./Downloads/aim_session_5.csv)
