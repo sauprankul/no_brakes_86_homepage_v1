@@ -5,9 +5,9 @@ import { renderSeoPages, robotsText, rssXml, sitemapXml } from '../../scripts/se
 const template = '<!doctype html><html lang="en"><head><meta name="description" content="old" /><title>Old</title></head><body><main id="main-content" tabindex="-1"></main></body></html>';
 const index = {
   generated_at: '2026-10-05T20:00:00.000Z',
-  categories: [{ id: 'racing', path: '/racing', title: 'Racing', name: 'Racing', intro: 'Race reports.', parent: null }],
+  categories: [{ id: 'racing', path: '/outdated-racing-title', title: 'Racing', name: 'Racing', intro: 'Race reports.', parent: null }],
   articles: [
-    { id: 'round-1', path: '/racing/round-1', title: 'Round 1', subtitle: 'Fast lap.', type: 'Event', parent: 'racing', published: true, hasArticle: true, date: '2026-02-15T04:00:00.000Z', updatedAt: '2026-02-15T04:00:00.000Z', thumbnail: '/media/round-1/thumbnail.jpg', html: '<p>Authored evidence.</p>', searchSections: [] },
+    { id: 'round-1', path: '/outdated-racing-title/outdated-round-title', title: 'Round 1', subtitle: 'Fast lap.', type: 'Event', parent: 'racing', published: true, hasArticle: true, date: '2026-02-15T04:00:00.000Z', updatedAt: '2026-02-15T04:00:00.000Z', thumbnail: '/media/round-1/thumbnail.jpg', html: '<p>Authored evidence.</p>', searchSections: [] },
     { id: 'draft', path: '/racing/draft', title: 'Draft', parent: 'racing', published: false, hasArticle: true, html: '<p>Private draft.</p>' },
   ],
   about: { title: 'About', html: '<p>About the author.</p>', searchSections: [{ kind: 'p', text: 'About the author.' }] },

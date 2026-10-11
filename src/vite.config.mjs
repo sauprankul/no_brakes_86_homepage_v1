@@ -13,7 +13,12 @@ export default defineConfig({
   publicDir: process.env.NO_BRAKES_PUBLIC_DIR ?? resolve(import.meta.dirname, 'public'),
   server: {
     watch: {
-      ignored: ['**/public/**/downloads/**'],
+      // Content watch copies author media into public/media. Native Windows file
+      // watching can reject a newly replaced image as EBUSY, which otherwise
+      // terminates Vite during routine authoring. The content-index socket
+      // already refreshes the page data, and the browser requests media by URL.
+      usePolling: process.platform === 'win32',
+      ignored: ['**/public/**/downloads/**', '**/public/media/**'],
     },
   },
   plugins: [{

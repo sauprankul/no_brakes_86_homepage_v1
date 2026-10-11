@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { descriptionFor, routeMetadata, SITE_URL } from './document-metadata.mjs';
+import { contentPath } from './content-routes.mjs';
 
 const SITE_NAME = 'No Brakes 86';
 const AUTHOR_NAME = 'Saurabh Kulkarni';
@@ -26,6 +27,16 @@ const normalizedPath = (value) => value === '/' ? '/' : `/${String(value ?? '').
 
 function directChildren(index, id) {
   return [...index.categories, ...index.articles].filter((entry) => entry.parent === id);
+}
+
+function withCanonicalPaths(index) {
+  const nodes = [...(index.categories ?? []), ...(index.articles ?? [])];
+  const withPath = (entry) => ({ ...entry, path: contentPath(nodes, entry) });
+  return {
+    ...index,
+    categories: (index.categories ?? []).map(withPath),
+    articles: (index.articles ?? []).map(withPath),
+  };
 }
 
 function breadcrumbEntries(index, entry) {
@@ -149,6 +160,7 @@ function renderDocument(template, metadata, body) {
 }
 
 export function renderSeoPages(index, template) {
+  index = withCanonicalPaths(index);
   const pages = [];
   const add = (kind, entry) => {
     const metadata = pageMetadata(index, kind, entry);
@@ -194,6 +206,7 @@ Sitemap: ${SITE_URL}/sitemap.xml
 }
 
 export function sitemapXml(index) {
+  index = withCanonicalPaths(index);
   const contentDates = [...(index.categories ?? []), ...(index.articles ?? [])].map((entry) => entry.updatedAt || entry.date).filter(Boolean).sort();
   const records = [{ path: '/', lastmod: contentDates.at(-1) }, { path: '/about' }];
   for (const category of index.categories ?? []) records.push({ path: category.path, lastmod: category.updatedAt || category.date });
@@ -204,6 +217,7 @@ export function sitemapXml(index) {
 }
 
 export function rssXml(index) {
+  index = withCanonicalPaths(index);
   const articles = (index.articles ?? [])
     .filter((entry) => entry.published === true && entry.hasArticle === true)
     .sort((left, right) => (right.date ?? '').localeCompare(left.date ?? ''));

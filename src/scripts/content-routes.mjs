@@ -15,7 +15,7 @@ export function contentPath(nodes, node) {
 
   while (current && !visited.has(current.id)) {
     visited.add(current.id);
-    segments.unshift(routeSegment(current.config?.slug ?? current.config?.title ?? current.title ?? current.name ?? current.id));
+    segments.unshift(current.id);
     current = current.parent ? byId.get(current.parent) : null;
   }
 
@@ -28,7 +28,7 @@ export function normalizeRoutePath(value) {
 }
 
 export function entryRoutePath(roots, entries, entry) {
-  return entry.path ? normalizeRoutePath(entry.path) : contentPath([...roots, ...entries], entry);
+  return contentPath([...roots, ...entries], entry);
 }
 
 export function resolveContentRoute(roots, entries, pathname) {
