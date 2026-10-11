@@ -32,6 +32,7 @@ test('development server exposes the terminal log sink and production does not i
   const vite = await readFile(path.join(process.cwd(), 'vite.config.mjs'), 'utf8');
   assert.match(app, /if \(import\.meta\.env\.DEV\) installClientLogBridge/);
   assert.match(vite, /\/__dev\/client-log/);
-  assert.match(vite, /ignored: \['\*\*\/public\/\*\*\/downloads\/\*\*'\]/);
+  assert.match(vite, /usePolling: process\.platform === 'win32'/);
+  assert.match(vite, /ignored: \['\*\*\/public\/\*\*\/downloads\/\*\*', '\*\*\/public\/media\/\*\*'\]/);
   assert.deepEqual(clientLogRecord('log', ['route', { id: 'season' }]), { level: 'log', message: 'route {"id":"season"}' });
 });

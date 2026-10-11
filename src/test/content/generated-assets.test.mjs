@@ -37,7 +37,7 @@ test('content build emits thumbnails and downloads without flattening the entry 
   assert.equal(index.about.title, 'About');
   assert.match(index.about.html, /<h2 id="author">Author<\/h2>/);
   assert.equal(await readFile(path.join(output, 'logo.jpg'), 'utf8'), 'site logo');
-  assert.match(built.html, /href="\/86-challenge\/2026-season\/round-1\/downloads\/lap%20data\.csv"/);
+  assert.match(built.html, /href="\/race\/season\/round-1\/downloads\/lap%20data\.csv"/);
   assert.equal(await readFile(path.join(output, 'media', 'round-1', 'thumbnail.jpg'), 'utf8'), 'synthetic thumbnail');
-  assert.match(await readFile(path.join(output, '86-challenge', '2026-season', 'round-1', 'downloads', 'lap data.csv'), 'utf8'), /time,speed/);
+  assert.match(await readFile(path.join(output, 'race', 'season', 'round-1', 'downloads', 'lap data.csv'), 'utf8'), /time,speed/);
 });
