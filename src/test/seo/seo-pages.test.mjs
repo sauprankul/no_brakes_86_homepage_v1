@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { renderSeoPages, robotsText, rssXml, sitemapXml } from '../../scripts/seo-pages.mjs';
+import { mkdtemp, readFile, access, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { renderSeoPages, robotsText, rssXml, sitemapXml, writeSeoPages } from '../../scripts/seo-pages.mjs';
 
 const template = '<!doctype html><html lang="en"><head><meta name="description" content="old" /><title>Old</title></head><body><main id="main-content" tabindex="-1"></main></body></html>';
 const index = {
@@ -20,11 +23,29 @@ test('renders published routes as crawlable HTML with canonical metadata and Art
   assert.match(article.html, /<link rel="canonical" href="https:\/\/nobrakes86\.com\/racing\/round-1"/);
   assert.match(article.html, /"@type":"Article"/);
   assert.match(article.html, /"inLanguage":"en"/);
+  assert.match(article.html, /max-image-preview:large/);
   assert.match(article.html, /By <a href="\/about">Saurabh Kulkarni<\/a>/);
   assert.match(article.html, /<time datetime="2026-02-15T04:00:00.000Z">Published February 15, 2026<\/time>/);
   assert.match(article.html, /<p>Authored evidence\.<\/p>/);
   assert.match(article.html, /property="og:image" content="https:\/\/nobrakes86\.com\/media\/round-1\/thumbnail\.jpg"/);
   assert.equal(pages.some((page) => page.route === '/racing/draft'), false);
+});
+
+test('production output has slashless article files and a noindex 404 instead of a homepage fallback', async () => {
+  const output = await mkdtemp(path.join(tmpdir(), 'no-brakes-seo-test-'));
+  try {
+    await writeSeoPages(index, template, output);
+    const article = await readFile(path.join(output, 'racing/round-1.html'), 'utf8');
+    assert.match(article, /Authored evidence/);
+    await assert.rejects(access(path.join(output, 'racing/round-1/index.html')));
+    await assert.rejects(access(path.join(output, 'racing/draft.html')));
+    const missing = await readFile(path.join(output, '404.html'), 'utf8');
+    assert.match(missing, /name="robots" content="noindex,follow"/);
+    assert.match(missing, /404 · NOT FOUND/);
+    assert.doesNotMatch(missing, /rel="canonical"/);
+  } finally {
+    await rm(output, { recursive: true, force: true });
+  }
 });
 
 test('generates an RSS feed for published article routes', () => {

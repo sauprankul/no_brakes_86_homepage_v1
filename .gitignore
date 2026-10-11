@@ -9,3 +9,4 @@ src/public/**/downloads/
 coverage/
 .c8-collection-tmp/
 .vite/
+.wrangler/

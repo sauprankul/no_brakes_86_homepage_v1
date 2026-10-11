@@ -232,10 +232,17 @@ export function rssXml(index) {
 export async function writeSeoPages(index, template, outputRoot) {
   const pages = renderSeoPages(index, template);
   for (const page of pages) {
-    const destination = page.route === '/' ? path.join(outputRoot, 'index.html') : path.join(outputRoot, page.route.replace(/^\//, ''), 'index.html');
+    // Pages serves route.html at /route, matching our slashless canonical URLs.
+    const destination = page.route === '/' ? path.join(outputRoot, 'index.html') : path.join(outputRoot, `${page.route.replace(/^\//, '')}.html`);
     await mkdir(path.dirname(destination), { recursive: true });
     await writeFile(destination, page.html, 'utf8');
   }
+  // A top-level 404 disables Pages' implicit homepage fallback for missing paths.
+  const missingMetadata = pageMetadata(index, 'not-found', { path: '/404' });
+  const missingBody = '<section class="not-found" aria-labelledby="not-found-title"><p class="eyebrow">404 · NOT FOUND</p><h1 id="not-found-title">That page isn’t here.</h1><p>The requested page is unavailable.</p><a class="not-found__home" href="/">Go home</a></section>';
+  const missingHtml = renderDocument(template, missingMetadata, missingBody)
+    .replace(/\s*<link rel="canonical"[^>]*\/>/, '');
+  await writeFile(path.join(outputRoot, '404.html'), missingHtml, 'utf8');
   await writeFile(path.join(outputRoot, 'robots.txt'), robotsText(), 'utf8');
   await writeFile(path.join(outputRoot, 'sitemap.xml'), sitemapXml(index), 'utf8');
   await writeFile(path.join(outputRoot, 'feed.xml'), rssXml(index), 'utf8');
