@@ -278,7 +278,9 @@ function collectionMarkup(id, articleMode) {
 }
 
 function mountCollection(id, articleMode) {
-  const root = document.querySelector(`#collection-${id}`);
+  // Content keys may be nested paths (for example, "86-challenge/2026").
+  // They are valid HTML IDs but must not be interpolated into a CSS selector.
+  const root = document.getElementById(`collection-${id}`);
   const results = document.querySelector('#category-results');
   const direct = directChildren(id);
   const all = descendantEntries(id);
