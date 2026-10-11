@@ -1,12 +1,13 @@
 export function rootCategoryId(nodes, node) {
-  const byId = new Map(nodes.map((candidate) => [candidate.id, candidate]));
+  const nodeKey = (candidate) => candidate.key ?? candidate.id;
+  const byId = new Map(nodes.map((candidate) => [nodeKey(candidate), candidate]));
   const visited = new Set();
   let parent = node.parent;
   while (parent && !visited.has(parent)) {
     visited.add(parent);
     const parentNode = byId.get(parent);
     if (!parentNode) return parent;
-    if (!parentNode.parent) return parentNode.id;
+    if (!parentNode.parent) return nodeKey(parentNode);
     parent = parentNode.parent;
   }
   return parent ?? null;
