@@ -8,15 +8,16 @@ export function routeSegment(value) {
 }
 
 export function contentPath(nodes, node) {
-  const byId = new Map(nodes.map((candidate) => [candidate.id, candidate]));
+  const nodeKey = (candidate) => candidate.key ?? candidate.id;
+  const byKey = new Map(nodes.map((candidate) => [nodeKey(candidate), candidate]));
   const segments = [];
   const visited = new Set();
   let current = node;
 
-  while (current && !visited.has(current.id)) {
-    visited.add(current.id);
-    segments.unshift(current.id);
-    current = current.parent ? byId.get(current.parent) : null;
+  while (current && !visited.has(nodeKey(current))) {
+    visited.add(nodeKey(current));
+    segments.unshift(current.slug ?? current.config?.id ?? current.id);
+    current = current.parent ? byKey.get(current.parent) : null;
   }
 
   return `/${segments.join('/')}`;

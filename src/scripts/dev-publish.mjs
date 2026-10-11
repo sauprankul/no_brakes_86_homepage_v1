@@ -26,10 +26,11 @@ export async function togglePublishedEntry(id, root = contentRoot) {
   const configs = await configFiles(root);
   for (const file of configs) {
     const config = YAML.parse(await readFile(file, 'utf8')) ?? {};
-    if (config.id !== id) continue;
+    const key = path.relative(root, path.dirname(file)).replaceAll(path.sep, '/');
+    if (key !== id) continue;
     const next = togglePublication(config);
     await writeFile(file, YAML.stringify(next), 'utf8');
-    return next;
+    return { ...next, id: key };
   }
   throw new Error(`No entry with id "${id}" exists in Content.`);
 }

@@ -226,5 +226,5 @@ export async function validateSizedMedia(contentRoot) {
 export function publicMediaPath(nodeId, sourcePath) {
   const normalized = sourcePath.replaceAll('\\', '/').replace(/^\.\/Media\//i, '');
   const type = mediaTypeFor(normalized);
-  return `/media/${encodeURIComponent(nodeId)}/${sizedMediaRelativePath(normalized, type).split('/').map(encodeURIComponent).join('/')}`;
+  return `/media/${String(nodeId).split('/').map(encodeURIComponent).join('/')}/${sizedMediaRelativePath(normalized, type).split('/').map(encodeURIComponent).join('/')}`;
 }

@@ -42,21 +42,19 @@ const nodes = await Promise.all(configFiles.map(async (file) => ({
   dir: path.dirname(file),
   config: YAML.parse(await readFile(file, 'utf8')) ?? {},
 })));
-const nodeById = new Map();
-
 for (const node of nodes) {
   const { config, file } = node;
   const label = repositoryRelative(file);
   if (!isNonEmptyString(config.id) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(config.id)) errors.push(`${label}: id must be lowercase kebab-case.`);
   if (!isNonEmptyString(config.title)) errors.push(`${label}: title must be a non-empty string.`);
-  if (config.id && nodeById.has(config.id)) errors.push(`${label}: duplicate id "${config.id}" (also in ${repositoryRelative(nodeById.get(config.id).file)}).`);
-  else if (config.id) nodeById.set(config.id, node);
 }
 
 for (const node of nodes) {
   const { config, file, dir } = node;
   const label = repositoryRelative(file);
-  if (config.parent && !nodeById.has(config.parent)) errors.push(`${label}: parent "${config.parent}" does not exist.`);
+  const parent = nodes.find((candidate) => candidate.dir === path.dirname(dir));
+  if (parent && config.parent !== parent.config.id) errors.push(`${label}: parent must be the immediate parent folder's id "${parent.config.id}".`);
+  if (!parent && config.parent) errors.push(`${label}: root entries cannot declare a parent.`);
   if (config.published_at != null && !isTimestamp(config.published_at)) errors.push(`${label}: published_at must be an ISO 8601 timestamp when present.`);
   if (config.updated_at != null && !isTimestamp(config.updated_at)) errors.push(`${label}: updated_at must be an ISO 8601 timestamp when present.`);
   if (config.published !== true) continue;
@@ -76,8 +74,18 @@ for (const node of nodes) {
   }
 }
 
+const siblingIdsByDirectory = new Map();
 for (const node of nodes) {
-  const children = nodes.filter((candidate) => candidate.config.parent === node.config.id);
+  if (!node.config.id) continue;
+  const directory = path.dirname(node.dir);
+  const siblingIds = siblingIdsByDirectory.get(directory) ?? new Map();
+  if (siblingIds.has(node.config.id)) errors.push(`${repositoryRelative(node.file)}: duplicate sibling id "${node.config.id}" (also in ${repositoryRelative(siblingIds.get(node.config.id).file)}).`);
+  else siblingIds.set(node.config.id, node);
+  siblingIdsByDirectory.set(directory, siblingIds);
+}
+
+for (const node of nodes) {
+  const children = nodes.filter((candidate) => path.dirname(candidate.dir) === node.dir);
   const articleFile = path.join(node.dir, 'article.md');
   if (!children.length || !await exists(articleFile)) continue;
   const article = await readFile(articleFile, 'utf8');
